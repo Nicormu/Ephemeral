@@ -1,292 +1,292 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
-/// <summary>
-/// Fills a 13×13 dungeon grid with RoomTemplate instances, guaranteeing connectivity from Start to Boss.
-///
-/// Algorithm (greedy spanning-tree + branch):
-///   1. Place Start room at (0,0).
-///   2. Grow a "carved" region via BFS — each step places a corridor or normal room adjacent to carved cells.
-///   3. At carved-region boundaries that have ≥2 free sides, insert Treasure/DeadEnd side rooms.
-///   4. Place Boss at the bottom-right corner (known-empty).
-///   5. Validate connectivity via RoomConnector.ValidateConnectivity(). If any room is unreachable, retry.
-///
-/// Notes: This uses a greedy placement strategy — it does NOT guarantee a layout on every attempt.
-/// That's why generation retries up to MaxAttempts times before falling back to BuildMinimal().
-/// </summary>
 public static class FloorLayout
 {
-    public const int GridSize = 13;
-    private const int MaxAttempts = 5;
+    public const int RoomGridSize = 9;       // 9x9 room-grid (each cell = one room slot, Isaac-style)
+    private const int MinRooms = 8;
+    private const int MaxRooms = 15;
+    private const int TreasureRoomCount = 1;
+    private const int MaxGenerationAttempts = 30;
+    private const int MaxGrowthSteps = 2000; // safety cap against infinite loops
 
-    /// <summary>All rooms placed in the dungeon after a successful generation.</summary>
     public struct DungeonResult
     {
         public List<Room> Rooms;
-        public Vector2Int StartPosition;   // grid coords of player spawn (Start room)
-        public Vector2Int BossPosition;    // grid coords of boss room top-left corner
+        public Vector2Int StartPosition;
+        public Vector2Int BossPosition;
         public int Seed;
     }
 
-    /// <summary>Generate a dungeon layout for the 13×13 grid.</summary>
-    public static DungeonResult Generate(System.Random rng, RoomTemplate[] startTemplates, RoomTemplate[] normalTemplates,
-                                         RoomTemplate[] treasureTemplates, RoomTemplate[] bossTemplates,
-                                         RoomTemplate[] deadEndTemplates, RoomTemplate[] corridorTemplates)
+    private class CellNode
     {
-        for (int attempt = 0; attempt < MaxAttempts; attempt++)
+        public Vector2Int Cell;
+        public RoomType Type = RoomType.Normal;
+        public DoorDirection Doors;
+        public int DistanceFromStart;
+    }
+
+    private static readonly DoorDirection[] AllDirections =
+        { DoorDirection.North, DoorDirection.South, DoorDirection.East, DoorDirection.West };
+
+    public static DungeonResult Generate(System.Random rng)
+    {
+        for (int attempt = 0; attempt < MaxGenerationAttempts; attempt++)
         {
-            DungeonResult result = TryGenerate(rng, startTemplates, normalTemplates, treasureTemplates, bossTemplates, deadEndTemplates, corridorTemplates);
+            var result = TryGenerate(rng);
             if (result.Rooms != null && result.Rooms.Count > 0)
                 return result;
-
-            Debug.LogWarning($"[FloorLayout] Generation attempt {attempt + 1} failed — regenerating.");
         }
 
-        // Last resort: minimal viable dungeon (Start → Boss)
+        Debug.LogWarning("[FloorLayout] All generation attempts failed — using minimal fallback.");
         return BuildMinimal();
     }
 
-    private static DungeonResult TryGenerate(System.Random rng, RoomTemplate[] startTemplates, RoomTemplate[] normalTemplates,
-                                             RoomTemplate[] treasureTemplates, RoomTemplate[] bossTemplates,
-                                             RoomTemplate[] deadEndTemplates, RoomTemplate[] corridorTemplates)
+    private static DungeonResult TryGenerate(System.Random rng)
     {
-        // --- Phase 1: Determine target room counts ---
-        int totalRooms = Mathf.Clamp(Mathf.FloorToInt(rng.Next(9, 18)), 6, 14);
-        int branchSlots = Mathf.Clamp(totalRooms - 4, 1, 6); // Start + Boss are always placed
+        var cells = new Dictionary<Vector2Int, CellNode>();
+        Vector2Int startCell = new Vector2Int(RoomGridSize / 2, RoomGridSize / 2);
+        cells[startCell] = new CellNode { Cell = startCell, Type = RoomType.Start, DistanceFromStart = 0 };
 
-        // --- Phase 2: BFS "carving" to find room positions and connections ---
-        var grid = new bool[GridSize, GridSize]; // false = empty
-        var slotList = new Dictionary<Vector2Int, (int width, int height)>();
-        var cellToRoomIdx = new Dictionary<Vector2Int, int>(); // maps each occupied cell to its room index
+        int targetRooms = rng.Next(MinRooms, MaxRooms + 1);
 
-        // Step 1: Place Start at top-left corner (0,0)
-        RoomTemplate startTpl = PickRandom(startTemplates, rng);
-        if (!TryPlaceRoom(grid, ref slotList, ref cellToRoomIdx, startTpl))
-            return default;
+        GrowMainPath(cells, startCell, targetRooms, rng);
+        if (cells.Count < 3) return default; // too small, retry
 
-        // Step 2: BFS expansion — repeatedly place a room on the carved-region boundary
-        int roomsPlaced = 1; // Start is already placed
-        int branchLeft = branchSlots;
+        if (!PlaceBoss(cells)) return default; // no valid leaf found, retry
 
-        while (roomsPlaced < totalRooms - 1 && branchLeft >= 0) // -1 for Boss
-        {
-            var boundarySlots = GetBoundarySlots(slotList, grid);
-            if (boundarySlots.Count == 0)
-                break;
+        PlaceTreasureRooms(cells, rng);
+        ComputeDoors(cells);
+        ClassifyRemainingTypes(cells, rng);
 
-            Vector2Int pos = boundarySlots[rng.Next(boundarySlots.Count)];
+        List<Room> rooms = BuildRooms(cells, rng);
+        if (rooms.Count == 0) return default;
 
-            // Check if this slot is a "junction" (≥2 free sides adjacent to carved region)
-            bool isJunction = IsJunctionSlot(pos, grid);
-            RoomTemplate roomTpl;
-
-            if (isJunction && branchLeft > 0)
-            {
-                // Branch off: place Treasure or DeadEnd
-                bool isTreasure = ((roomsPlaced % 3) != 0) && (branchLeft > 1);
-                roomTpl = isTreasure ? PickRandom(treasureTemplates, rng) : PickRandom(deadEndTemplates, rng);
-                if (!TryPlaceRoom(grid, ref slotList, ref cellToRoomIdx, roomTpl))
-                    continue; // skip this branch attempt — try another boundary slot next iteration
-
-                branchLeft--;
-            }
-            else
-            {
-                // Continue the main path: normal room or corridor
-                roomTpl = rng.Next(2) == 0 ? PickRandom(normalTemplates, rng) : PickRandom(corridorTemplates, rng);
-                if (!TryPlaceRoom(grid, ref slotList, ref cellToRoomIdx, roomTpl))
-                    continue;
-            }
-
-            roomsPlaced++;
-        }
-
-        // Step 3: Place Boss at the bottom-right corner (GridSize-1, GridSize-1)
-        Vector2Int bossPos = new Vector2Int(GridSize - 1, GridSize - 1);
-        if (!TryPlaceRoom(grid, ref slotList, ref cellToRoomIdx, PickRandom(bossTemplates, rng)))
-            return default; // could not fit — will retry
-
-        // Step 4: Build Room structs and validate connectivity
-        List<Room> rooms = ConvertToRooms(slotList, cellToRoomIdx);
-        DungeonResult result = new DungeonResult
+        var result = new DungeonResult
         {
             Rooms = rooms,
-            StartPosition = FindStartRoom(rooms),
-            BossPosition = bossPos,
+            StartPosition = FindRoomPosition(rooms, RoomType.Start),
+            BossPosition = FindRoomPosition(rooms, RoomType.Boss),
             Seed = rng.Next(),
         };
 
-        if (RoomConnector.ValidateConnectivity(result, out var disconnected))
-            return result;
+        if (!RoomConnector.ValidateConnectivity(result.Rooms, out _))
+            return default;
 
-        return default; // will retry
+        return result;
     }
 
-    private static bool TryPlaceRoom(bool[,] grid, ref Dictionary<Vector2Int, (int width, int height)> slotList,
-                                     ref Dictionary<Vector2Int, int> cellToRoomIdx, RoomTemplate template)
+    // -- Step 1: grow the main tree via random walk, rejecting placements that would create a loop --
+    private static void GrowMainPath(Dictionary<Vector2Int, CellNode> cells, Vector2Int startCell, int targetRooms, System.Random rng)
     {
-        for (int ty = 0; ty <= GridSize - template.Height; ty++)
+        int safety = 0;
+        while (cells.Count < targetRooms && safety < MaxGrowthSteps)
         {
-            for (int tx = 0; tx <= GridSize - template.Width; tx++)
+            safety++;
+
+            var placed = cells.Keys.ToList();
+            Vector2Int fromCell = placed[rng.Next(placed.Count)];
+            DoorDirection dir = RandomDirection(rng);
+            Vector2Int newCell = fromCell + UnitOffset(dir);
+
+            if (!InBounds(newCell)) continue;
+            if (cells.ContainsKey(newCell)) continue;
+            if (CountOccupiedNeighbors(newCell, cells) > 1) continue; // would create a loop — reject
+
+            cells[newCell] = new CellNode { Cell = newCell, DistanceFromStart = cells[fromCell].DistanceFromStart + 1 };
+        }
+    }
+
+    // -- Step 2: Boss = leaf room (1 neighbor) farthest from Start --
+    private static bool PlaceBoss(Dictionary<Vector2Int, CellNode> cells)
+    {
+        CellNode bossNode = null;
+        int bestDist = -1;
+
+        foreach (var kv in cells)
+        {
+            if (kv.Value.Type == RoomType.Start) continue;
+            if (CountOccupiedNeighbors(kv.Key, cells) != 1) continue; // must be a leaf
+
+            if (kv.Value.DistanceFromStart > bestDist)
             {
-                bool fits = true;
-                foreach (var cell in template.FloorCells)
-                {
-                    int gx = tx + cell.x;
-                    int gy = ty + cell.y;
-                    if (gx < 0 || gx >= GridSize || gy < 0 || gy >= GridSize || grid[gx, gy])
-                    { fits = false; break; }
-                }
-
-                if (!fits) continue;
-
-                int roomIdx = cellToRoomIdx.Count; // next free room index
-
-                for (int ci = 0; ci < template.FloorCells.Length; ci++)
-                {
-                    int gx = tx + template.FloorCells[ci].x;
-                    int gy = ty + template.FloorCells[ci].y;
-                    grid[gx, gy] = true;
-                    slotList[new Vector2Int(gx, gy)] = (template.Width, template.Height);
-                    cellToRoomIdx[new Vector2Int(gx, gy)] = roomIdx;
-                }
-
-                return true;
+                bestDist = kv.Value.DistanceFromStart;
+                bossNode = kv.Value;
             }
         }
-        return false;
+
+        if (bossNode == null) return false;
+        bossNode.Type = RoomType.Boss;
+        return true;
     }
 
-    private static List<Vector2Int> GetBoundarySlots(Dictionary<Vector2Int, (int width, int height)> slotList, bool[,] grid)
+    // -- Step 3: Treasure rooms are NEW leaf cells attached off the existing tree — never required to reach Boss --
+    private static void PlaceTreasureRooms(Dictionary<Vector2Int, CellNode> cells, System.Random rng)
     {
-        var outer = new HashSet<Vector2Int>();
-        Vector2Int[] dirs = { Vector2Int.left, Vector2Int.right, Vector2Int.up, Vector2Int.down };
+        int placed = 0;
+        int attempts = 0;
 
-        foreach (var kv in slotList)
+        while (placed < TreasureRoomCount && attempts < 100)
         {
-            Vector2Int cellPos = kv.Key;
-            int w = kv.Value.width;
-            int h = kv.Value.height;
+            attempts++;
 
-            // Check each corner of the room for empty neighbors
-            foreach (int dx in new[] { 0, w - 1 })
-            foreach (int dy in new[] { 0, h - 1 })
+            var candidates = cells.Keys.ToList();
+            Vector2Int fromCell = candidates[rng.Next(candidates.Count)];
+            if (cells[fromCell].Type == RoomType.Boss) continue; // keep Boss single-door
+
+            DoorDirection dir = RandomDirection(rng);
+            Vector2Int newCell = fromCell + UnitOffset(dir);
+
+            if (!InBounds(newCell) || cells.ContainsKey(newCell)) continue;
+            if (CountOccupiedNeighbors(newCell, cells) > 1) continue;
+
+            cells[newCell] = new CellNode
             {
-                Vector2Int cell = cellPos + new Vector2Int(dx, dy);
-                foreach (var dir in dirs)
-                {
-                    Vector2Int neighbor = cell + dir;
-                    if (neighbor.x >= 0 && neighbor.x < GridSize && neighbor.y >= 0 && neighbor.y < GridSize && !grid[neighbor.x, neighbor.y])
-                        outer.Add(neighbor);
-                }
-            }
+                Cell = newCell,
+                Type = RoomType.Treasure,
+                DistanceFromStart = cells[fromCell].DistanceFromStart + 1
+            };
+            placed++;
         }
-        return new List<Vector2Int>(outer);
     }
 
-    private static bool IsJunctionSlot(Vector2Int pos, bool[,] grid)
+    // -- Step 4: derive each cell's real doors from its actual occupied neighbors --
+    private static void ComputeDoors(Dictionary<Vector2Int, CellNode> cells)
     {
-        // A junction is a slot where the room can extend in at least 2 directions into empty space
-        Vector2Int[] dirs = { Vector2Int.left, Vector2Int.right, Vector2Int.up, Vector2Int.down };
-        int freeSides = 0;
-
-        foreach (var dir in dirs)
+        foreach (var kv in cells)
         {
-            Vector2Int neighbor = pos + dir;
-            if (neighbor.x >= 0 && neighbor.x < GridSize && neighbor.y >= 0 && neighbor.y < GridSize && !grid[neighbor.x, neighbor.y])
-                freeSides++;
+            DoorDirection doors = DoorDirection.None;
+            foreach (var dir in AllDirections)
+                if (cells.ContainsKey(kv.Key + UnitOffset(dir)))
+                    doors |= dir;
+
+            kv.Value.Doors = doors;
         }
-
-        return freeSides >= 2;
     }
 
-    private static RoomTemplate PickRandom<T>(T[] list, System.Random rng) where T : class => list[rng.Next(list.Length)];
-
-    private static Vector2Int FindStartRoom(IReadOnlyList<Room> rooms)
+    // -- Step 5: leaves become DeadEnd, non-leaves become Normal (or Corridor if straight-through) --
+    private static void ClassifyRemainingTypes(Dictionary<Vector2Int, CellNode> cells, System.Random rng)
     {
-        foreach (var room in rooms)
-            if (room.Type == RoomType.Start) return room.GridPos;
-        return Vector2Int.zero; // fallback
+        foreach (var kv in cells)
+        {
+            var node = kv.Value;
+            if (node.Type == RoomType.Start || node.Type == RoomType.Boss || node.Type == RoomType.Treasure)
+                continue;
+
+            int doorCount = CountBits((int)node.Doors);
+
+            if (doorCount == 1)
+                node.Type = RoomType.DeadEnd;
+            else if (doorCount == 2 && IsOppositePair(node.Doors))
+                node.Type = (rng.NextDouble() < 0.4) ? RoomType.Corridor : RoomType.Normal;
+            else
+                node.Type = RoomType.Normal;
+        }
     }
 
-    private static List<Room> ConvertToRooms(Dictionary<Vector2Int, (int width, int height)> slotList, Dictionary<Vector2Int, int> cellToRoomIdx)
+    // -- Step 6: convert graph cells into placed Rooms, picking a template per (type, doors) --
+    private static List<Room> BuildRooms(Dictionary<Vector2Int, CellNode> cells, System.Random rng)
     {
         var rooms = new List<Room>();
-        var roomTemplateMap = new Dictionary<int, RoomType>(); // maps internal index back to template type
 
-        // Phase A: count how many distinct rooms exist and group cells by room index
-        var cellGroups = new Dictionary<int, List<Vector2Int>>();
-        foreach (var kv in cellToRoomIdx)
+        foreach (var kv in cells)
         {
-            int idx = kv.Value;
-            if (!cellGroups.ContainsKey(idx))
-                cellGroups[idx] = new List<Vector2Int>();
-            cellGroups[idx].Add(kv.Key);
-        }
-
-        // Phase B: infer template type for each room based on shape and position
-        foreach (var group in cellGroups)
-        {
-            int idx = group.Key;
-            var cells = group.Value;
-
-            // Calculate bounding box
-            int minX = int.MaxValue, minY = int.MaxValue;
-            int maxX = int.MinValue, maxY = int.MinValue;
-            foreach (var c in cells)
+            var node = kv.Value;
+            RoomTemplate template = RoomPool.GetTemplate(node.Type, node.Doors, rng);
+            if (template == null)
             {
-                minX = Mathf.Min(minX, c.x);
-                minY = Mathf.Min(minY, c.y);
-                maxX = Mathf.Max(maxX, c.x);
-                maxY = Mathf.Max(maxY, c.y);
+                Debug.LogWarning($"[FloorLayout] No template for {node.Type} with doors {node.Doors} — skipping room.");
+                continue;
             }
 
-            int w = maxX - minX + 1;
-            int h = maxY - minY + 1;
-            Vector2Int pos = new Vector2Int(minX, minY);
+            Vector2Int tileOrigin = new Vector2Int(
+                kv.Key.x * RoomTemplate.RoomTileSize.x,
+                kv.Key.y * RoomTemplate.RoomTileSize.y
+            );
 
-            // Infer type based on shape and position
-            RoomType inferredType;
-            if (minX == 0 && minY == 0)
-                inferredType = RoomType.Start;
-            else if (maxX == GridSize - 1 || maxY == GridSize - 1)
-                inferredType = RoomType.Boss;
-            else if (w == 1 && h == 1 && cells.Count == 1)
-                inferredType = RoomType.DeadEnd;
-            else if (w * h == cells.Count && (w >= 2 || h >= 2))
-                inferredType = RoomType.Normal; // full rectangle
-            else
-                inferredType = RoomType.Corridor; // partial fill
-
-            roomTemplateMap[idx] = inferredType;
-
-            // Build Room struct
-            var roomCells = new RoomCell[cells.Count];
-            for (int i = 0; i < cells.Count; i++)
-                roomCells[i] = new RoomCell(cells[i].x - minX, cells[i].y - minY);
-
-            Room room = new Room(inferredType, pos, w, h);
-            room.Cells = roomCells;
+            Room room = new Room(node.Type, tileOrigin, template.Width, template.Height)
+            {
+                Doors = node.Doors,
+                Cells = BuildAbsoluteCells(template.FloorCells, tileOrigin)
+            };
             rooms.Add(room);
         }
 
         return rooms;
     }
 
+    private static RoomCell[] BuildAbsoluteCells(Vector2Int[] localCells, Vector2Int origin)
+    {
+        var result = new RoomCell[localCells.Length];
+        for (int i = 0; i < localCells.Length; i++)
+            result[i] = new RoomCell(origin.x + localCells[i].x, origin.y + localCells[i].y);
+        return result;
+    }
+
+    // -- helpers --
+
+    private static DoorDirection RandomDirection(System.Random rng) => (rng.Next(4)) switch
+    {
+        0 => DoorDirection.North,
+        1 => DoorDirection.South,
+        2 => DoorDirection.East,
+        _ => DoorDirection.West,
+    };
+
+    private static Vector2Int UnitOffset(DoorDirection dir) => dir switch
+    {
+        DoorDirection.North => new Vector2Int(0, 1),
+        DoorDirection.South => new Vector2Int(0, -1),
+        DoorDirection.East  => new Vector2Int(1, 0),
+        DoorDirection.West  => new Vector2Int(-1, 0),
+        _ => Vector2Int.zero
+    };
+
+    private static bool InBounds(Vector2Int cell) =>
+        cell.x >= 0 && cell.x < RoomGridSize && cell.y >= 0 && cell.y < RoomGridSize;
+
+    private static int CountOccupiedNeighbors(Vector2Int cell, Dictionary<Vector2Int, CellNode> cells)
+    {
+        int count = 0;
+        foreach (var dir in AllDirections)
+            if (cells.ContainsKey(cell + UnitOffset(dir)))
+                count++;
+        return count;
+    }
+
+    private static int CountBits(int mask)
+    {
+        int count = 0;
+        while (mask != 0) { count += mask & 1; mask >>= 1; }
+        return count;
+    }
+
+    private static bool IsOppositePair(DoorDirection doors) =>
+        doors == (DoorDirection.North | DoorDirection.South) ||
+        doors == (DoorDirection.East | DoorDirection.West);
+
+    private static Vector2Int FindRoomPosition(IReadOnlyList<Room> rooms, RoomType type)
+    {
+        foreach (var room in rooms)
+            if (room.Type == type) return room.GridPos;
+        return Vector2Int.zero;
+    }
+
     private static DungeonResult BuildMinimal()
     {
-        // Minimal viable dungeon: Start (1×1) at (0,0) → Boss (1×1) at bottom-right
-        Room start = new Room(RoomType.Start, Vector2Int.zero, 1, 1);
-        start.Cells = new[] { new RoomCell(0, 0) };
+        Room start = new Room(RoomType.Start, Vector2Int.zero, RoomTemplate.RoomTileSize.x, RoomTemplate.RoomTileSize.y)
+        { Doors = DoorDirection.East };
 
-        Room boss = new Room(RoomType.Boss, new Vector2Int(GridSize - 1, GridSize - 1), 1, 1);
-        boss.Cells = new[] { new RoomCell(GridSize - 1, GridSize - 1) };
+        Vector2Int bossOrigin = new Vector2Int(RoomTemplate.RoomTileSize.x, 0);
+        Room boss = new Room(RoomType.Boss, bossOrigin, RoomTemplate.RoomTileSize.x, RoomTemplate.RoomTileSize.y)
+        { Doors = DoorDirection.West };
 
         return new DungeonResult
         {
             Rooms = new List<Room> { start, boss },
             StartPosition = Vector2Int.zero,
-            BossPosition = new Vector2Int(GridSize - 1, GridSize - 1),
+            BossPosition = bossOrigin,
             Seed = 0,
         };
     }

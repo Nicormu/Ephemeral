@@ -1,109 +1,76 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Validates and annotates room connectivity in a generated dungeon using BFS.
-///
-/// Call Validate() after generation to ensure every room is reachable from the Start room.
-/// Unreachable rooms are logged as errors so you can detect dead dungeons during development.
-/// </summary>
 public static class RoomConnector
 {
-    /// <summary>
-    /// Validate that all rooms in the dungeon are connected to the Start room via BFS.
-    /// Returns true if every room is reachable.
-    /// </summary>
-    public static bool ValidateConnectivity(DungeonResult result, out List<Room> disconnectedRooms)
+    private static readonly DoorDirection[] AllDirections =
+        { DoorDirection.North, DoorDirection.South, DoorDirection.East, DoorDirection.West };
+
+    public static bool ValidateConnectivity(List<Room> rooms, out List<Room> disconnectedRooms)
     {
-        var rooms = result.Rooms;
-        if (rooms == null || rooms.Count == 0)
-        {
-            disconnectedRooms = new List<Room>();
-            return false;
-        }
+        disconnectedRooms = new List<Room>();
+        if (rooms == null || rooms.Count == 0) return false;
 
-        // Separate arrays for connectivity tracking — avoids mutating Room structs directly.
-        var isConnected = new bool[rooms.Count];
-        var connectedFrom = new List<int>[rooms.Count]; // store indices of connected neighbors
+        var posToIndex = new Dictionary<Vector2Int, int>();
+        for (int i = 0; i < rooms.Count; i++)
+            posToIndex[rooms[i].GridPos] = i;
 
-        // BFS from Start room.
-        var queue = new Queue<int>();
         int startIndex = FindStartRoom(rooms);
-        if (startIndex < 0)
-        {
-            disconnectedRooms = new List<Room>();
-            return false;
-        }
+        if (startIndex < 0) return false;
 
-        isConnected[startIndex] = true;
+        var visited = new bool[rooms.Count];
+        var queue = new Queue<int>();
+        visited[startIndex] = true;
         queue.Enqueue(startIndex);
         int visitedCount = 0;
 
         while (queue.Count > 0)
         {
-            int currentIdx = queue.Dequeue();
+            int idx = queue.Dequeue();
             visitedCount++;
+            var room = rooms[idx];
 
-            var currentRoom = rooms[currentIdx];
-            for (int i = 0; i < rooms.Count; i++)
+            foreach (var dir in AllDirections)
             {
-                if (isConnected[i]) continue; // already visited.
-                if (IsAdjacent(currentRoom, rooms[i]))
+                if ((room.Doors & dir) == 0) continue;
+
+                Vector2Int neighborPos = room.GridPos + DirectionOffset(dir, room.Width, room.Height);
+                if (posToIndex.TryGetValue(neighborPos, out int neighborIdx) && !visited[neighborIdx])
                 {
-                    isConnected[i] = true;
-                    connectedFrom[i] = new List<int> { currentIdx };
-                    connectedFrom[currentIdx].Add(i);
-                    queue.Enqueue(i);
+                    visited[neighborIdx] = true;
+                    queue.Enqueue(neighborIdx);
                 }
             }
         }
 
-        disconnectedRooms = new List<Room>();
         for (int i = 0; i < rooms.Count; i++)
-        {
-            if (!isConnected[i])
-                disconnectedRooms.Add(rooms[i]);
-        }
+            if (!visited[i]) disconnectedRooms.Add(rooms[i]);
 
         bool allConnected = visitedCount == rooms.Count;
         if (!allConnected)
         {
             var names = new List<string>(disconnectedRooms.Count);
             foreach (var room in disconnectedRooms)
-                names.Add($"Room at ({room.GridPos.x},{room.GridPos.y}) type={room.Type}");
+                names.Add($"Room at ({room.GridPos.x},{room.GridPos.y}) type={room.Type} doors={room.Doors}");
             Debug.LogError($"[RoomConnector] {disconnectedRooms.Count}/{rooms.Count} rooms unreachable:\n" + string.Join("\n", names));
         }
 
         return allConnected;
     }
 
-    /// <summary>
-    /// Two rooms are considered adjacent if their grid bounding boxes overlap or touch (expanded by 1 cell for exits).
-    /// </summary>
-    private static bool IsAdjacent(Room a, Room b)
+    private static Vector2Int DirectionOffset(DoorDirection dir, int width, int height) => dir switch
     {
-        // Each room's bounds expanded by 1 cell (tolerance for exit portals).
-        int aMinX = a.GridPos.x - 1;
-        int aMaxX = a.GridPos.x + a.Width + 1;
-        int aMinY = a.GridPos.y - 1;
-        int aMaxY = a.GridPos.y + a.Height + 1;
-
-        int bMinX = b.GridPos.x - 1;
-        int bMaxX = b.GridPos.x + b.Width + 1;
-        int bMinY = b.GridPos.y - 1;
-        int bMaxY = b.GridPos.y + b.Height + 1;
-
-        // Two rectangles overlap if neither is completely to the left/right or above/below the other.
-        return aMaxX >= bMinX && aMinX <= bMaxX && aMaxY >= bMinY && aMinY <= bMaxY;
-    }
+        DoorDirection.North => new Vector2Int(0, height),
+        DoorDirection.South => new Vector2Int(0, -height),
+        DoorDirection.East  => new Vector2Int(width, 0),
+        DoorDirection.West  => new Vector2Int(-width, 0),
+        _ => Vector2Int.zero
+    };
 
     private static int FindStartRoom(IReadOnlyList<Room> rooms)
     {
         for (int i = 0; i < rooms.Count; i++)
-        {
             if (rooms[i].Type == RoomType.Start) return i;
-        }
-        // Fallback: assume index 0 is start.
-        return 0;
+        return -1;
     }
 }
