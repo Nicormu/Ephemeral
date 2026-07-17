@@ -513,7 +513,7 @@ MonoBehaviour:
   _moveSpeed: 3
   _rollDuration: 0.3
   _rollSpeedMultiplier: 2.5
-  _rollCooldown: 0.8
+  _rollCooldown: 0.5
 --- !u!1 &1588157720
 GameObject:
   m_ObjectHideFlags: 0
