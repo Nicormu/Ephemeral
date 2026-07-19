@@ -6,7 +6,7 @@ public class RoomTemplate
 
     public RoomType Type { get; set; }
     public DoorDirection Doors { get; set; }
-    public (Vector2Int pos, CellState state)[] Cells { get; set; }
+    public (Vector2Int pos, CellState state, ObstacleType obstacle)[] Cells { get; set; }
 
     public int Width => RoomTileSize.x;
     public int Height => RoomTileSize.y;

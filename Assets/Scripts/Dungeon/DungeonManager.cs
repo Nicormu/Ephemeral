@@ -16,8 +16,22 @@ public class DungeonManager : MonoBehaviour
 
     [Header("Visual — Tilemap Mode")]
     public Tilemap floorTilemap;
-    public Tile defaultFloorTile;
+    public TileBase defaultFloorTile;
 
+    [Header("Visual — Style Variants")]
+    [Tooltip("One is picked randomly per generation and used for the whole dungeon. Leave empty to always use defaultFloorTile.")]
+    public RoomStyleSO[] availableStyles;
+    private RoomStyleSO _currentStyle;
+
+    [Header("Visual — Walls")]
+    [Tooltip("Separate tilemap for room walls. Give it a TilemapCollider2D in the scene so walls physically block the player.")]
+    public Tilemap wallTilemap;
+
+    [Tooltip("Fallback wall tile used when no RoomStyleSO (or no WallTile on the active style) is set.")]
+    public TileBase defaultWallTile;
+
+    [Tooltip("How many tiles wide each doorway opening is, centered on the room's connecting edge.")]
+    public int doorGapWidth = 3;
     [Tooltip("Separate tilemap for obstacles. Give it a TilemapCollider2D in the scene so obstacles physically block the player.")]
     public Tilemap obstacleTilemap;
     public Tile obstacleTile;
@@ -30,6 +44,7 @@ public class DungeonManager : MonoBehaviour
     private GameObject _roomContainers;
     private bool _isGenerating;
     private Dictionary<Vector2Int, CellState> _cellLookup;
+    private readonly Dictionary<Vector3Int, ObstacleType> _breakableObstacles = new();
 
     public FloorLayout.DungeonResult CurrentLayout => _currentLayout;
     public Room[] Rooms => _currentLayout.Rooms?.ToArray();
@@ -130,12 +145,82 @@ public class DungeonManager : MonoBehaviour
         if (_roomContainers != null)
             Destroy(_roomContainers);
 
+        _breakableObstacles.Clear();
+        wallTilemap?.ClearAllTiles(); // <-- add this line
+
+        _currentStyle = (availableStyles != null && availableStyles.Length > 0)
+            ? availableStyles[SeedManager.Rng.Next(availableStyles.Length)]
+            : null;
+
         _roomContainers = new GameObject("DungeonRooms");
         _roomContainers.transform.SetParent(transform);
 
         foreach (var room in _currentLayout.Rooms)
             SpawnRoom(room);
     }
+
+    private void SpawnWalls(Room room)
+    {
+        if (wallTilemap == null) return;
+
+        TileBase wallTileToUse = _currentStyle != null && _currentStyle.WallTile != null
+            ? _currentStyle.WallTile
+            : defaultWallTile;
+
+        if (wallTileToUse == null) return;
+
+        PaintVerticalWall(room, wallTileToUse, isWestSide: true);
+        PaintVerticalWall(room, wallTileToUse, isWestSide: false);
+        PaintNorthWall(room, wallTileToUse);
+        PaintSouthWall(room, wallTileToUse);
+    }
+
+    private void PaintVerticalWall(Room room, TileBase wallTile, bool isWestSide)
+    {
+        DoorDirection side = isWestSide ? DoorDirection.West : DoorDirection.East;
+        int wallColumn = isWestSide ? room.GridPos.x - 1 : room.GridPos.x + room.Width;
+
+        bool hasDoor = (room.Doors & side) != 0;
+        int gapStart = hasDoor ? GetGapStart(room.GridPos.y, room.Height) : int.MinValue;
+        int gapEnd = gapStart + doorGapWidth; // exclusive
+
+        for (int y = room.GridPos.y; y < room.GridPos.y + room.Height; y++)
+        {
+            if (hasDoor && y >= gapStart && y < gapEnd) continue; // leave the doorway open
+            wallTilemap.SetTile(new Vector3Int(wallColumn, y, 0), wallTile);
+        }
+    }
+
+    private void PaintNorthWall(Room room, TileBase wallTile)
+    {
+        int wallRow = room.GridPos.y + room.Height;
+        bool hasDoor = (room.Doors & DoorDirection.North) != 0;
+        int gapStart = hasDoor ? GetGapStart(room.GridPos.x, room.Width) : int.MinValue;
+        int gapEnd = gapStart + doorGapWidth;
+
+        for (int x = room.GridPos.x; x < room.GridPos.x + room.Width; x++)
+        {
+            if (hasDoor && x >= gapStart && x < gapEnd) continue;
+            wallTilemap.SetTile(new Vector3Int(x, wallRow, 0), wallTile);
+        }
+    }
+
+    private void PaintSouthWall(Room room, TileBase wallTile)
+    {
+        int wallRow = room.GridPos.y - 1;
+        bool hasDoor = (room.Doors & DoorDirection.South) != 0;
+        int gapStart = hasDoor ? GetGapStart(room.GridPos.x, room.Width) : int.MinValue;
+        int gapEnd = gapStart + doorGapWidth;
+
+        for (int x = room.GridPos.x; x < room.GridPos.x + room.Width; x++)
+        {
+            if (hasDoor && x >= gapStart && x < gapEnd) continue;
+            wallTilemap.SetTile(new Vector3Int(x, wallRow, 0), wallTile);
+        }
+    }
+
+    private int GetGapStart(int edgeOrigin, int edgeLength) =>
+        edgeOrigin + (edgeLength - doorGapWidth) / 2;
 
     private void SpawnRoom(Room room)
     {
@@ -150,26 +235,40 @@ public class DungeonManager : MonoBehaviour
                 instance.name = $"{room.Type}_Room_{room.GridPos.x}_{room.GridPos.y}";
             }
         }
-        else if (floorTilemap != null && defaultFloorTile != null)
+        else if (floorTilemap != null && (defaultFloorTile != null || (_currentStyle?.FloorTiles?.Length ?? 0) > 0))
         {
+            TileBase[] floorVariants = (_currentStyle != null && _currentStyle.FloorTiles != null && _currentStyle.FloorTiles.Length > 0)
+                ? _currentStyle.FloorTiles
+                : new TileBase[] { defaultFloorTile };
+
             foreach (var cell in room.Cells)
             {
                 Vector3Int tilePos = new Vector3Int(cell.X, cell.Y, 0);
 
-                // Floor always goes down first — Obstacle cells are Floor + something on top, so
-                // "below every obstacle there's floor" is guaranteed by construction.
-                floorTilemap.SetTile(tilePos, defaultFloorTile);
+                // Pick a random variant per cell (seeded, so regenerating the same seed gives the same floor look).
+                TileBase floorTile = floorVariants[SeedManager.Rng.Next(floorVariants.Length)];
+                floorTilemap.SetTile(tilePos, floorTile);
 
-                if (cell.State == CellState.Obstacle && obstacleTilemap != null && obstacleTile != null)
-                    obstacleTilemap.SetTile(tilePos, obstacleTile);
+                if (cell.State == CellState.Obstacle && obstacleTilemap != null)
+                {
+                    TileBase tileToUse = cell.Obstacle != null && cell.Obstacle.VisualTile != null
+                        ? cell.Obstacle.VisualTile
+                        : obstacleTile;
+
+                    obstacleTilemap.SetTile(tilePos, tileToUse);
+
+                    if (cell.Obstacle != null && !cell.Obstacle.IsUnbreakable)
+                        _breakableObstacles[tilePos] = cell.Obstacle;
+                }
             }
+
+            SpawnWalls(room);
         }
         else
         {
             Debug.LogWarning($"[DungeonManager] No visuals configured for room type '{room.Type}' at ({room.GridPos.x},{room.GridPos.y}) — skipping visual spawn.");
         }
     }
-
     private void CalculatePlayerSpawnPosition()
     {
         Vector3 spawnPos = GetRoomCornerWorld(_currentLayout.StartPosition);
@@ -248,6 +347,27 @@ public class DungeonManager : MonoBehaviour
                 connected.Add(other);
         }
         return connected.ToArray();
+    }
+
+    /// <summary>Attempts to destroy a breakable obstacle at a world position. Returns true if one broke.</summary>
+    public bool TryBreakObstacleAt(Vector3 worldPos)
+    {
+        Vector2Int grid = WorldToGridCell(worldPos);
+        Vector3Int tilePos = new Vector3Int(grid.x, grid.y, 0);
+
+        if (!_breakableObstacles.TryGetValue(tilePos, out var obstacleType))
+            return false; // nothing there, or it's unbreakable/floor
+
+        obstacleTilemap.SetTile(tilePos, null);
+        _breakableObstacles.Remove(tilePos);
+
+        if (_cellLookup != null)
+            _cellLookup[grid] = CellState.Floor;
+
+        if (obstacleType.BreakEffectPrefab != null)
+            Instantiate(obstacleType.BreakEffectPrefab, new Vector3(tilePos.x + 0.5f, tilePos.y + 0.5f, 0f), Quaternion.identity);
+
+        return true;
     }
 
 #if UNITY_EDITOR

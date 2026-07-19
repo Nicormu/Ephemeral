@@ -6,6 +6,9 @@ public class RoomTemplateSOEditor : Editor
 {
     private const float CellSize = 20f;
 
+    // Which obstacle asset gets assigned when you click a cell into the Obstacle state.
+    private ObstacleType _paintObstacle;
+
     public override void OnInspectorGUI()
     {
         DrawDefaultInspector();
@@ -14,6 +17,11 @@ public class RoomTemplateSOEditor : Editor
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Cell Grid — click to cycle Void → Floor → Obstacle", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Shift-click an Obstacle cell to repaint its obstacle type without cycling.", EditorStyles.miniLabel);
+
+        _paintObstacle = (ObstacleType)EditorGUILayout.ObjectField("Obstacle To Paint", _paintObstacle, typeof(ObstacleType), false);
+
+        EditorGUILayout.Space();
 
         for (int y = RoomTemplateSO.RoomTileSize.y - 1; y >= 0; y--)
         {
@@ -21,12 +29,30 @@ public class RoomTemplateSOEditor : Editor
             for (int x = 0; x < RoomTemplateSO.RoomTileSize.x; x++)
             {
                 CellState current = template.GetCell(x, y);
+                ObstacleType currentObstacle = template.GetObstacle(x, y);
                 GUI.backgroundColor = ColorForState(current);
 
-                if (GUILayout.Button("", GUILayout.Width(CellSize), GUILayout.Height(CellSize)))
+                string label = (current == CellState.Obstacle && currentObstacle != null)
+                    ? currentObstacle.name.Substring(0, Mathf.Min(3, currentObstacle.name.Length))
+                    : "";
+
+                if (GUILayout.Button(label, GUILayout.Width(CellSize), GUILayout.Height(CellSize)))
                 {
-                    Undo.RecordObject(template, "Toggle Room Cell");
-                    template.SetCell(x, y, NextState(current));
+                    Undo.RecordObject(template, "Edit Room Cell");
+
+                    bool repaintOnly = Event.current != null && Event.current.shift && current == CellState.Obstacle;
+
+                    if (repaintOnly)
+                    {
+                        template.SetCell(x, y, CellState.Obstacle, _paintObstacle);
+                    }
+                    else
+                    {
+                        CellState next = NextState(current);
+                        ObstacleType obstacleForCell = next == CellState.Obstacle ? _paintObstacle : null;
+                        template.SetCell(x, y, next, obstacleForCell);
+                    }
+
                     EditorUtility.SetDirty(template);
                 }
             }

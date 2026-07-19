@@ -35,11 +35,12 @@ public struct RoomCell
     public int X;
     public int Y;
     public CellState State;
+    public ObstacleType Obstacle;
     public Vector2Int CellPos => new Vector2Int(X, Y);
 
-    public RoomCell(int x, int y, CellState state = CellState.Floor)
+    public RoomCell(int x, int y, CellState state = CellState.Floor, ObstacleType obstacle = null)
     {
-        X = x; Y = y; State = state;
+        X = x; Y = y; State = state; Obstacle = obstacle;
     }
 }
 

@@ -309,11 +309,15 @@ public static class FloorLayout
         return rooms;
     }
 
-    private static RoomCell[] BuildAbsoluteCells((Vector2Int pos, CellState state)[] localCells, Vector2Int origin)
+    private static RoomCell[] BuildAbsoluteCells((Vector2Int pos, CellState state, ObstacleType obstacle)[] localCells, Vector2Int origin)
     {
         var result = new RoomCell[localCells.Length];
         for (int i = 0; i < localCells.Length; i++)
-            result[i] = new RoomCell(origin.x + localCells[i].pos.x, origin.y + localCells[i].pos.y, localCells[i].state);
+            result[i] = new RoomCell(
+                origin.x + localCells[i].pos.x,
+                origin.y + localCells[i].pos.y,
+                localCells[i].state,
+                localCells[i].obstacle);
         return result;
     }
 
