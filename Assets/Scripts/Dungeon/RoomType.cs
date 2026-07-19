@@ -11,7 +11,6 @@ public enum RoomType
     Corridor
 }
 
-/// <summary>Which walls of a room have a door connecting to a neighboring room.</summary>
 [System.Flags]
 public enum DoorDirection
 {
@@ -22,17 +21,28 @@ public enum DoorDirection
     West  = 1 << 3,
 }
 
+/// <summary>What a single dungeon cell contains. Void cells simply aren't part of a room's Cells array.</summary>
+public enum CellState
+{
+    Void,
+    Floor,
+    Obstacle
+}
+
 [System.Serializable]
 public struct RoomCell
 {
     public int X;
     public int Y;
+    public CellState State;
     public Vector2Int CellPos => new Vector2Int(X, Y);
 
-    public RoomCell(int x, int y) { X = x; Y = y; }
+    public RoomCell(int x, int y, CellState state = CellState.Floor)
+    {
+        X = x; Y = y; State = state;
+    }
 }
 
-/// <summary>A single generated room: type, tile-space origin, size, and which walls connect to neighbors.</summary>
 [System.Serializable]
 public struct Room
 {
@@ -40,11 +50,15 @@ public struct Room
     public Vector2Int GridPos;   // tile-space bottom-left corner
     public int Width;
     public int Height;
-    public DoorDirection Doors;  // which walls have a door to a neighboring room
+    public DoorDirection Doors;
 
     public RoomCell[] Cells;
 
-    public Room(RoomType type, Vector2Int gridPos, int width, int height)
+    /// <summary>
+    /// Create a room with default floor cells. Use the object initializer to set Doors
+    /// after construction (e.g., { Doors = node.Doors }) or pass it directly here.
+    /// </summary>
+    public Room(RoomType type, Vector2Int gridPos, int width, int height, DoorDirection doors = DoorDirection.None)
     {
         Type = type;
         GridPos = gridPos;
@@ -57,6 +71,6 @@ public struct Room
         int idx = 0;
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
-                Cells[idx++] = new RoomCell(gridPos.x + x, gridPos.y + y);
+                Cells[idx++] = new RoomCell(gridPos.x + x, gridPos.y + y); // defaults to Floor
     }
 }
