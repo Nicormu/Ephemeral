@@ -10,47 +10,48 @@ public class DungeonManager : MonoBehaviour
     public bool autoStart = true;
     public int overrideSeed = -1;
 
-    [Header("Visual — Prefab Mode")]
-    [Tooltip("Whole-room prefabs (already include their own obstacles/walls baked in).")]
-    public RoomPrefabMap prefabMap;
-
-    [Header("Visual — Tilemap Mode")]
+    [Header("Visual — Tilemap containers")]
+    [Tooltip("Floor/wall tiles come from each room's RoomStyleSO (via its RoomTemplateSO). This field just holds the scene's Tilemap component to draw into.")]
     public Tilemap floorTilemap;
-    public TileBase defaultFloorTile;
-
-    [Header("Visual — Style Variants")]
-    [Tooltip("One is picked randomly per generation and used for the whole dungeon. Leave empty to always use defaultFloorTile.")]
-    public RoomStyleSO[] availableStyles;
-    private RoomStyleSO _currentStyle;
-
-    [Header("Visual — Walls")]
-    [Tooltip("Separate tilemap for room walls. Give it a TilemapCollider2D in the scene so walls physically block the player.")]
     public Tilemap wallTilemap;
 
-    [Tooltip("Fallback wall tile used when no RoomStyleSO (or no WallTile on the active style) is set.")]
-    public TileBase defaultWallTile;
-
-    [Tooltip("How many tiles wide each doorway opening is, centered on the room's connecting edge.")]
-    public int doorGapWidth = 3;
-    [Tooltip("Separate tilemap for obstacles. Give it a TilemapCollider2D in the scene so obstacles physically block the player.")]
+    [Header("Visual — Obstacles (blocking)")]
+    [Tooltip("Obstacles that physically stop the player (e.g. rocks). Give it a TilemapCollider2D. Each cell uses its own tile from the RoomTemplateSO obstacle palette.")]
     public Tilemap obstacleTilemap;
-    public Tile obstacleTile;
+
+    [Header("Visual — Hazards (walkable)")]
+    [Tooltip("Obstacles the player can walk over but that damage them (e.g. fire). No collider needed — PlayerHazardDetector handles the damage. Each cell uses its own tile from the RoomTemplateSO obstacle palette.")]
+    public Tilemap hazardTilemap;
+
+    [Header("Visual — Decoration (optional)")]
+    public Tilemap decorationTilemap;
+    public TileBase[] decorationTileVariants;
+    [Range(0f, 1f)] public float decorationChance = 0.08f;
+
+    [Header("Doors")]
+    [Tooltip("Prefab with a Door component. Instantiated once per shared edge between two adjacent rooms.")]
+    public GameObject doorPrefab;
 
     [Header("Player Spawn")]
     public PlayerSpawnMode spawnMode = PlayerSpawnMode.RoomCenter;
     public Vector3 spawnOffset = Vector3.zero;
 
     private FloorLayout.DungeonResult _currentLayout;
-    private GameObject _roomContainers;
+    private GameObject _doorContainer;
+    private GameObject _roomLogicContainer;
+    private Dictionary<Vector2Int, RoomController> _roomControllers;
     private bool _isGenerating;
     private Dictionary<Vector2Int, CellState> _cellLookup;
-    private readonly Dictionary<Vector3Int, ObstacleType> _breakableObstacles = new();
+    private Dictionary<Vector2Int, int> _obstacleHazardDamage;
 
     public FloorLayout.DungeonResult CurrentLayout => _currentLayout;
     public Room[] Rooms => _currentLayout.Rooms?.ToArray();
     public Vector2Int StartGridPosition => _currentLayout.StartPosition;
     public Vector3 PlayerSpawnWorldPosition { get; private set; }
     public Vector2Int BossGridPosition => _currentLayout.BossPosition;
+
+    private static readonly DoorDirection[] AllDirections =
+        { DoorDirection.North, DoorDirection.South, DoorDirection.East, DoorDirection.West };
 
     void Awake()
     {
@@ -125,150 +126,273 @@ public class DungeonManager : MonoBehaviour
     private void BuildCellLookup()
     {
         _cellLookup = new Dictionary<Vector2Int, CellState>();
+        _obstacleHazardDamage = new Dictionary<Vector2Int, int>();
+
         foreach (var room in _currentLayout.Rooms)
+        {
             foreach (var cell in room.Cells)
+            {
                 _cellLookup[cell.CellPos] = cell.State;
+
+                if (cell.State == CellState.Obstacle && !cell.ObstacleBlocksMovement && cell.ObstacleDamage > 0)
+                    _obstacleHazardDamage[cell.CellPos] = cell.ObstacleDamage;
+            }
+        }
     }
 
     /// <summary>What's at a grid cell. Cells not part of any room (including unpainted "void" cells) return Void.</summary>
     public CellState GetCellState(Vector2Int gridCell) =>
         _cellLookup != null && _cellLookup.TryGetValue(gridCell, out var state) ? state : CellState.Void;
 
+    /// <summary>Damage dealt by standing on this cell, if it's a walkable hazard obstacle (e.g. fire). 0 otherwise.</summary>
+    public int GetObstacleHazardDamage(Vector2Int gridCell) =>
+        _obstacleHazardDamage != null && _obstacleHazardDamage.TryGetValue(gridCell, out var dmg) ? dmg : 0;
+
     /// <summary>Converts a world position (1 unit = 1 tile) to a grid cell.</summary>
     public static Vector2Int WorldToGridCell(Vector3 worldPos) =>
         new Vector2Int(Mathf.FloorToInt(worldPos.x), Mathf.FloorToInt(worldPos.y));
 
-    // — Visual Spawning —
+    /// <summary>
+    /// Finds the room whose bounds contain worldPos (works even if worldPos itself sits on a
+    /// Void cell not present in any room's Cells array), then returns the world-space center
+    /// of the closest Floor cell within that room. Returns null if worldPos isn't inside any
+    /// room's bounds — callers should fall back to a known-safe location (e.g. Start room).
+    /// </summary>
+    public Vector3? FindNearestSafePositionInRoom(Vector3 worldPos)
+    {
+        if (_currentLayout.Rooms == null) return null;
+
+        Room? containingRoom = null;
+        foreach (var room in _currentLayout.Rooms)
+        {
+            Vector3 min = GetRoomCornerWorld(room.GridPos);
+            Vector3 max = GetRoomFarCornerWorld(room.GridPos, room.Width, room.Height);
+
+            if (worldPos.x >= min.x && worldPos.x < max.x &&
+                worldPos.y >= min.y && worldPos.y < max.y)
+            {
+                containingRoom = room;
+                break;
+            }
+        }
+
+        if (containingRoom == null) return null;
+
+        RoomCell? nearest = null;
+        float bestDistSq = float.MaxValue;
+
+        foreach (var cell in containingRoom.Value.Cells)
+        {
+            if (cell.State != CellState.Floor) continue;
+
+            Vector3 cellCenter = new Vector3(cell.X + 0.5f, cell.Y + 0.5f, 0f);
+            float distSq = (cellCenter - worldPos).sqrMagnitude;
+
+            if (distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                nearest = cell;
+            }
+        }
+
+        if (nearest == null) return null;
+
+        return new Vector3(nearest.Value.X + 0.5f, nearest.Value.Y + 0.5f, 0f);
+    }
+
+    // — Visual + gameplay spawning —
 
     private void SpawnDungeonVisuals()
     {
-        if (_roomContainers != null)
-            Destroy(_roomContainers);
+        floorTilemap?.ClearAllTiles();
+        wallTilemap?.ClearAllTiles();
+        decorationTilemap?.ClearAllTiles();
+        obstacleTilemap?.ClearAllTiles();
+        hazardTilemap?.ClearAllTiles();
 
-        _breakableObstacles.Clear();
-        wallTilemap?.ClearAllTiles(); // <-- add this line
+        if (_doorContainer != null) Destroy(_doorContainer);
+        _doorContainer = new GameObject("DungeonDoors");
+        _doorContainer.transform.SetParent(transform);
 
-        _currentStyle = (availableStyles != null && availableStyles.Length > 0)
-            ? availableStyles[SeedManager.Rng.Next(availableStyles.Length)]
-            : null;
+        if (_roomLogicContainer != null) Destroy(_roomLogicContainer);
+        _roomLogicContainer = new GameObject("DungeonRoomLogic");
+        _roomLogicContainer.transform.SetParent(transform);
 
-        _roomContainers = new GameObject("DungeonRooms");
-        _roomContainers.transform.SetParent(transform);
+        if (floorTilemap == null)
+        {
+            Debug.LogWarning("[DungeonManager] No floor tilemap assigned — skipping visual spawn.");
+            return;
+        }
 
         foreach (var room in _currentLayout.Rooms)
-            SpawnRoom(room);
+            SpawnRoomFloor(room);
+
+        // Walls are NEVER hand-placed — same philosophy as doors: derived from grid adjacency
+        // of actual occupied cells, using each room's own WallFrontTile/WallTopTile style.
+        BuildWalls();
+        SpawnDecorations();
+
+        // Must run before SpawnDoors(): doors look up rooms by GridPos to know when to open.
+        SpawnRoomControllersAndEnemies();
+        SpawnDoors();
     }
 
-    private void SpawnWalls(Room room)
+    private void SpawnRoomFloor(Room room)
     {
-        if (wallTilemap == null) return;
+        if (room.FloorTile == null)
+            Debug.LogWarning($"[DungeonManager] Room at ({room.GridPos.x},{room.GridPos.y}) has no FloorTile — assign a RoomStyleSO on its RoomTemplateSO.");
 
-        TileBase wallTileToUse = _currentStyle != null && _currentStyle.WallTile != null
-            ? _currentStyle.WallTile
-            : defaultWallTile;
-
-        if (wallTileToUse == null) return;
-
-        PaintVerticalWall(room, wallTileToUse, isWestSide: true);
-        PaintVerticalWall(room, wallTileToUse, isWestSide: false);
-        PaintNorthWall(room, wallTileToUse);
-        PaintSouthWall(room, wallTileToUse);
-    }
-
-    private void PaintVerticalWall(Room room, TileBase wallTile, bool isWestSide)
-    {
-        DoorDirection side = isWestSide ? DoorDirection.West : DoorDirection.East;
-        int wallColumn = isWestSide ? room.GridPos.x - 1 : room.GridPos.x + room.Width;
-
-        bool hasDoor = (room.Doors & side) != 0;
-        int gapStart = hasDoor ? GetGapStart(room.GridPos.y, room.Height) : int.MinValue;
-        int gapEnd = gapStart + doorGapWidth; // exclusive
-
-        for (int y = room.GridPos.y; y < room.GridPos.y + room.Height; y++)
+        foreach (var cell in room.Cells)
         {
-            if (hasDoor && y >= gapStart && y < gapEnd) continue; // leave the doorway open
-            wallTilemap.SetTile(new Vector3Int(wallColumn, y, 0), wallTile);
-        }
-    }
+            Vector3Int tilePos = new Vector3Int(cell.X, cell.Y, 0);
 
-    private void PaintNorthWall(Room room, TileBase wallTile)
-    {
-        int wallRow = room.GridPos.y + room.Height;
-        bool hasDoor = (room.Doors & DoorDirection.North) != 0;
-        int gapStart = hasDoor ? GetGapStart(room.GridPos.x, room.Width) : int.MinValue;
-        int gapEnd = gapStart + doorGapWidth;
+            if (room.FloorTile != null)
+                floorTilemap.SetTile(tilePos, room.FloorTile);
 
-        for (int x = room.GridPos.x; x < room.GridPos.x + room.Width; x++)
-        {
-            if (hasDoor && x >= gapStart && x < gapEnd) continue;
-            wallTilemap.SetTile(new Vector3Int(x, wallRow, 0), wallTile);
-        }
-    }
-
-    private void PaintSouthWall(Room room, TileBase wallTile)
-    {
-        int wallRow = room.GridPos.y - 1;
-        bool hasDoor = (room.Doors & DoorDirection.South) != 0;
-        int gapStart = hasDoor ? GetGapStart(room.GridPos.x, room.Width) : int.MinValue;
-        int gapEnd = gapStart + doorGapWidth;
-
-        for (int x = room.GridPos.x; x < room.GridPos.x + room.Width; x++)
-        {
-            if (hasDoor && x >= gapStart && x < gapEnd) continue;
-            wallTilemap.SetTile(new Vector3Int(x, wallRow, 0), wallTile);
-        }
-    }
-
-    private int GetGapStart(int edgeOrigin, int edgeLength) =>
-        edgeOrigin + (edgeLength - doorGapWidth) / 2;
-
-    private void SpawnRoom(Room room)
-    {
-        if (prefabMap.HasPrefabs)
-        {
-            // Whole-room prefab — hand-crafted art already contains its own obstacles/colliders.
-            GameObject prefab = prefabMap.GetPrefabForType(room.Type);
-            if (prefab != null)
+            if (cell.State == CellState.Obstacle && cell.ObstacleTile != null)
             {
-                Vector3 worldPos = GetRoomCenterWorld(room.GridPos, room.Width, room.Height);
-                GameObject instance = Instantiate(prefab, worldPos, Quaternion.identity, _roomContainers.transform);
-                instance.name = $"{room.Type}_Room_{room.GridPos.x}_{room.GridPos.y}";
+                if (cell.ObstacleBlocksMovement)
+                {
+                    if (obstacleTilemap != null)
+                        obstacleTilemap.SetTile(tilePos, cell.ObstacleTile);
+                }
+                else
+                {
+                    if (hazardTilemap != null)
+                        hazardTilemap.SetTile(tilePos, cell.ObstacleTile);
+                }
             }
         }
-        else if (floorTilemap != null && (defaultFloorTile != null || (_currentStyle?.FloorTiles?.Length ?? 0) > 0))
+    }
+
+    /// <summary>
+    /// Walls are derived per-room, never hand-placed: whatever cell borders an occupied cell but
+    /// isn't itself occupied becomes a wall tile, styled using the owning room's WallFrontTile.
+    /// On a room's north-facing wall specifically, an extra WallTopTile is stacked one cell
+    /// higher to fake the taller "top wall" silhouette (32x32 pieces stacked, not a single
+    /// tall sprite).
+    /// </summary>
+    private void BuildWalls()
+    {
+        if (wallTilemap == null || _cellLookup == null || _currentLayout.Rooms == null) return;
+
+        var paintedFront = new HashSet<Vector2Int>();
+        var paintedTop = new HashSet<Vector2Int>();
+
+        foreach (var room in _currentLayout.Rooms)
         {
-            TileBase[] floorVariants = (_currentStyle != null && _currentStyle.FloorTiles != null && _currentStyle.FloorTiles.Length > 0)
-                ? _currentStyle.FloorTiles
-                : new TileBase[] { defaultFloorTile };
+            if (room.WallFrontTile == null) continue; // no wall style defined for this room's style
 
             foreach (var cell in room.Cells)
             {
-                Vector3Int tilePos = new Vector3Int(cell.X, cell.Y, 0);
+                Vector2Int cellPos = cell.CellPos;
 
-                // Pick a random variant per cell (seeded, so regenerating the same seed gives the same floor look).
-                TileBase floorTile = floorVariants[SeedManager.Rng.Next(floorVariants.Length)];
-                floorTilemap.SetTile(tilePos, floorTile);
-
-                if (cell.State == CellState.Obstacle && obstacleTilemap != null)
+                foreach (var dir in AllDirections)
                 {
-                    TileBase tileToUse = cell.Obstacle != null && cell.Obstacle.VisualTile != null
-                        ? cell.Obstacle.VisualTile
-                        : obstacleTile;
+                    Vector2Int wallPos = cellPos + UnitOffset(dir);
+                    if (_cellLookup.ContainsKey(wallPos)) continue; // occupied — this isn't a wall position
 
-                    obstacleTilemap.SetTile(tilePos, tileToUse);
+                    if (paintedFront.Add(wallPos))
+                        wallTilemap.SetTile(new Vector3Int(wallPos.x, wallPos.y, 0), room.WallFrontTile);
 
-                    if (cell.Obstacle != null && !cell.Obstacle.IsUnbreakable)
-                        _breakableObstacles[tilePos] = cell.Obstacle;
+                    if (dir == DoorDirection.North && room.WallTopTile != null)
+                    {
+                        Vector2Int capPos = wallPos + UnitOffset(DoorDirection.North);
+                        if (paintedTop.Add(capPos))
+                            wallTilemap.SetTile(new Vector3Int(capPos.x, capPos.y, 0), room.WallTopTile);
+                    }
                 }
             }
-
-            SpawnWalls(room);
-        }
-        else
-        {
-            Debug.LogWarning($"[DungeonManager] No visuals configured for room type '{room.Type}' at ({room.GridPos.x},{room.GridPos.y}) — skipping visual spawn.");
         }
     }
+
+    private void SpawnDecorations()
+    {
+        if (decorationTilemap == null || decorationTileVariants == null || decorationTileVariants.Length == 0) return;
+
+        foreach (var kv in _cellLookup)
+        {
+            if (kv.Value != CellState.Floor) continue; // never decorate obstacles/void
+            if (SeedManager.Rng.NextDouble() > decorationChance) continue;
+
+            TileBase deco = decorationTileVariants[SeedManager.Rng.Next(decorationTileVariants.Length)];
+            decorationTilemap.SetTile(new Vector3Int(kv.Key.x, kv.Key.y, 0), deco);
+        }
+    }
+
+    /// <summary>Creates one RoomController per room and spawns its enemies at their marked points.</summary>
+    private void SpawnRoomControllersAndEnemies()
+    {
+        _roomControllers = new Dictionary<Vector2Int, RoomController>();
+
+        foreach (var room in _currentLayout.Rooms)
+        {
+            var go = new GameObject($"Room_{room.Type}_{room.GridPos.x}_{room.GridPos.y}");
+            go.transform.SetParent(_roomLogicContainer.transform);
+
+            var controller = go.AddComponent<RoomController>();
+            controller.Initialize(room);
+            controller.SpawnEnemies(room.EnemySpawns);
+
+            _roomControllers[room.GridPos] = controller;
+        }
+    }
+
+    /// <summary>
+    /// Spawns one door per shared edge between two adjacent rooms. ComputeDoors() (in FloorLayout)
+    /// always assigns matching opposite doors on both sides of an edge, so acting only on
+    /// North/East flags is enough — the South/West side of the same pair is handled by the
+    /// neighboring room's own North/East flag. This avoids spawning the same door twice.
+    /// </summary>
+    private void SpawnDoors()
+    {
+        if (doorPrefab == null || _currentLayout.Rooms == null) return;
+
+        foreach (var room in _currentLayout.Rooms)
+        {
+            if ((room.Doors & DoorDirection.North) != 0)
+                PlaceDoor(room, DoorDirection.North);
+
+            if ((room.Doors & DoorDirection.East) != 0)
+                PlaceDoor(room, DoorDirection.East);
+        }
+    }
+
+    private void PlaceDoor(Room room, DoorDirection dir)
+    {
+        Vector3 worldPos;
+        Quaternion rotation;
+
+        if (dir == DoorDirection.North)
+        {
+            worldPos = new Vector3(room.GridPos.x + room.Width / 2f, room.GridPos.y + room.Height, 0f);
+            rotation = Quaternion.identity; // door spans horizontally
+        }
+        else // East
+        {
+            worldPos = new Vector3(room.GridPos.x + room.Width, room.GridPos.y + room.Height / 2f, 0f);
+            rotation = Quaternion.Euler(0f, 0f, 90f); // door spans vertically
+        }
+
+        GameObject instance = Instantiate(doorPrefab, worldPos, rotation, _doorContainer.transform);
+        instance.name = $"Door_{dir}_{room.GridPos.x}_{room.GridPos.y}";
+
+        var door = instance.GetComponent<Door>();
+        if (door == null)
+        {
+            Debug.LogWarning("[DungeonManager] doorPrefab has no Door component — it won't open/close automatically.");
+            return;
+        }
+
+        Vector2Int neighborGridPos = room.GridPos + DirectionOffset(dir, room.Width, room.Height);
+
+        if (_roomControllers.TryGetValue(room.GridPos, out var ownerController))
+            door.RegisterRoom(ownerController);
+
+        if (_roomControllers.TryGetValue(neighborGridPos, out var neighborController))
+            door.RegisterRoom(neighborController);
+    }
+
     private void CalculatePlayerSpawnPosition()
     {
         Vector3 spawnPos = GetRoomCornerWorld(_currentLayout.StartPosition);
@@ -295,6 +419,24 @@ public class DungeonManager : MonoBehaviour
 
     private Vector3 GetRoomCenterWorld(Vector2Int gridPos, int width, int height) =>
         new Vector3(gridPos.x + width / 2f, gridPos.y + height / 2f, 0f);
+
+    private static Vector2Int UnitOffset(DoorDirection dir) => dir switch
+    {
+        DoorDirection.North => new Vector2Int(0, 1),
+        DoorDirection.South => new Vector2Int(0, -1),
+        DoorDirection.East  => new Vector2Int(1, 0),
+        DoorDirection.West  => new Vector2Int(-1, 0),
+        _ => Vector2Int.zero
+    };
+
+    private static Vector2Int DirectionOffset(DoorDirection dir, int width, int height) => dir switch
+    {
+        DoorDirection.North => new Vector2Int(0, height),
+        DoorDirection.South => new Vector2Int(0, -height),
+        DoorDirection.East  => new Vector2Int(width, 0),
+        DoorDirection.West  => new Vector2Int(-width, 0),
+        _ => Vector2Int.zero
+    };
 
     public bool IsInsideDungeon(Vector3 worldPos)
     {
@@ -349,27 +491,6 @@ public class DungeonManager : MonoBehaviour
         return connected.ToArray();
     }
 
-    /// <summary>Attempts to destroy a breakable obstacle at a world position. Returns true if one broke.</summary>
-    public bool TryBreakObstacleAt(Vector3 worldPos)
-    {
-        Vector2Int grid = WorldToGridCell(worldPos);
-        Vector3Int tilePos = new Vector3Int(grid.x, grid.y, 0);
-
-        if (!_breakableObstacles.TryGetValue(tilePos, out var obstacleType))
-            return false; // nothing there, or it's unbreakable/floor
-
-        obstacleTilemap.SetTile(tilePos, null);
-        _breakableObstacles.Remove(tilePos);
-
-        if (_cellLookup != null)
-            _cellLookup[grid] = CellState.Floor;
-
-        if (obstacleType.BreakEffectPrefab != null)
-            Instantiate(obstacleType.BreakEffectPrefab, new Vector3(tilePos.x + 0.5f, tilePos.y + 0.5f, 0f), Quaternion.identity);
-
-        return true;
-    }
-
 #if UNITY_EDITOR
     void OnDrawGizmos()
     {
@@ -389,10 +510,21 @@ public class DungeonManager : MonoBehaviour
             if ((room.Doors & DoorDirection.East)  != 0) Gizmos.DrawLine(new Vector3(max.x, center.y, 0), new Vector3(max.x - 0.5f, center.y, 0));
             if ((room.Doors & DoorDirection.West)  != 0) Gizmos.DrawLine(new Vector3(min.x, center.y, 0), new Vector3(min.x + 0.5f, center.y, 0));
 
-            Gizmos.color = Color.red;
             foreach (var cell in room.Cells)
-                if (cell.State == CellState.Obstacle)
+            {
+                if (cell.State != CellState.Obstacle) continue;
+
+                if (cell.ObstacleBlocksMovement)
+                {
+                    Gizmos.color = Color.red;
                     Gizmos.DrawWireCube(new Vector3(cell.X + 0.5f, cell.Y + 0.5f, 0f), Vector3.one * 0.6f);
+                }
+                else
+                {
+                    Gizmos.color = new Color(1f, 0.5f, 0f);
+                    Gizmos.DrawWireSphere(new Vector3(cell.X + 0.5f, cell.Y + 0.5f, 0f), 0.3f);
+                }
+            }
         }
 
         if (_currentLayout.Rooms.Count > 0)
@@ -415,29 +547,4 @@ public class DungeonManager : MonoBehaviour
 #endif
 
     public enum PlayerSpawnMode { GridCorner, RoomCenter }
-
-    [System.Serializable]
-    public class RoomPrefabMap
-    {
-        public GameObject startPrefab;
-        public GameObject normalPrefab;
-        public GameObject treasurePrefab;
-        public GameObject bossPrefab;
-        public GameObject deadEndPrefab;
-        public GameObject corridorPrefab;
-
-        public bool HasPrefabs => startPrefab != null || normalPrefab != null || treasurePrefab != null ||
-                                   bossPrefab != null || deadEndPrefab != null || corridorPrefab != null;
-
-        public GameObject GetPrefabForType(RoomType type) => type switch
-        {
-            RoomType.Start      => startPrefab,
-            RoomType.Normal     => normalPrefab,
-            RoomType.Treasure   => treasurePrefab,
-            RoomType.Boss       => bossPrefab,
-            RoomType.DeadEnd    => deadEndPrefab,
-            RoomType.Corridor   => corridorPrefab,
-            _                   => null,
-        };
-    }
 }

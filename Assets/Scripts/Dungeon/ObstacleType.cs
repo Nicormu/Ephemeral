@@ -9,11 +9,11 @@ using UnityEngine.Tilemaps;
 public class ObstacleType : ScriptableObject
 {
     [Header("Visual")]
-    [Tooltip("Tile drawn on the obstacle tilemap for this obstacle. Accepts a normal Tile or an Animated Tile.")]
+    [Tooltip("Tile drawn for this obstacle when rendered as a tilemap. Accepts a normal Tile or an Animated Tile.")]
     public TileBase VisualTile;
 
     [Header("Behavior")]
-    [Tooltip("If true, this obstacle can never be destroyed. If false, it can be broken via DungeonManager.TryBreakObstacleAt().")]
+    [Tooltip("If true, this obstacle can never be destroyed. If false, it can be broken by gameplay logic.")]
     public bool IsUnbreakable = true;
 
     [Tooltip("Optional VFX/prefab spawned when this obstacle breaks. Only used when IsUnbreakable is false.")]

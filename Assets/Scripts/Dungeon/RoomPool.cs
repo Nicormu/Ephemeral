@@ -6,12 +6,6 @@ public static class RoomPool
     private static readonly Dictionary<(RoomType, DoorDirection), List<RoomTemplate>> _exact = new();
     private static readonly Dictionary<RoomType, List<RoomTemplate>> _anyDoorFallback = new();
 
-    /// <summary>
-    /// Load all RoomTemplateSO assets from Resources/RoomTemplates and index them into the pool.
-    /// Two lookup strategies are built:
-    ///   1. Exact (type, door-combo) — for rooms where door matching is critical (Boss, Start, etc.)
-    ///   2. Type-only fallback — for variety within the same room type when exact match isn't available.
-    /// </summary>
     public static void Build()
     {
         _exact.Clear();
@@ -49,5 +43,4 @@ public static class RoomPool
         if (!_anyDoorFallback.TryGetValue(template.Type, out var anyList)) { anyList = new List<RoomTemplate>(); _anyDoorFallback[template.Type] = anyList; }
         anyList.Add(template);
     }
-
 }

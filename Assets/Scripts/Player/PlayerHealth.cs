@@ -53,6 +53,14 @@ public class PlayerHealth : MonoBehaviour
         OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
     }
 
+    /// <summary>Overrides the max health and optionally sets current health. Call early (OnEnable/Awake) before any damage is applied.</summary>
+    public void SetInitial(int newMax, int startHealth = -1)
+    {
+        _maxHealth = Mathf.Max(1, newMax);
+        _currentHealth = startHealth >= 0 ? Mathf.Clamp(startHealth, 0, _maxHealth) : _maxHealth;
+        OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
+    }
+
     private void Die()
     {
         OnDied?.Invoke();

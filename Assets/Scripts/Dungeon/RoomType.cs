@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public enum RoomType
 {
@@ -21,7 +22,11 @@ public enum DoorDirection
     West  = 1 << 3,
 }
 
-/// <summary>What a single dungeon cell contains. Void cells simply aren't part of a room's Cells array.</summary>
+/// <summary>
+/// What a single dungeon cell contains. Void cells simply aren't part of a room's Cells array.
+/// Obstacle covers both blocking hazards (rocks) and walkable damaging hazards (fire) —
+/// see RoomCell.ObstacleBlocksMovement / ObstacleDamage.
+/// </summary>
 public enum CellState
 {
     Void,
@@ -35,12 +40,25 @@ public struct RoomCell
     public int X;
     public int Y;
     public CellState State;
-    public ObstacleType Obstacle;
+
+    /// <summary>Which obstacle visual to use. Only meaningful when State == Obstacle.</summary>
+    public TileBase ObstacleTile;
+
+    /// <summary>Whether this obstacle physically blocks the player. Only meaningful when State == Obstacle.</summary>
+    public bool ObstacleBlocksMovement;
+
+    /// <summary>Damage dealt if the player stands here. Only meaningful when State == Obstacle and ObstacleBlocksMovement is false.</summary>
+    public int ObstacleDamage;
+
     public Vector2Int CellPos => new Vector2Int(X, Y);
 
-    public RoomCell(int x, int y, CellState state = CellState.Floor, ObstacleType obstacle = null)
+    public RoomCell(int x, int y, CellState state = CellState.Floor, TileBase obstacleTile = null,
+        bool obstacleBlocksMovement = true, int obstacleDamage = 0)
     {
-        X = x; Y = y; State = state; Obstacle = obstacle;
+        X = x; Y = y; State = state;
+        ObstacleTile = obstacleTile;
+        ObstacleBlocksMovement = obstacleBlocksMovement;
+        ObstacleDamage = obstacleDamage;
     }
 }
 
@@ -54,11 +72,20 @@ public struct Room
     public DoorDirection Doors;
 
     public RoomCell[] Cells;
+    public EnemySpawn[] EnemySpawns;
 
-    /// <summary>
-    /// Create a room with default floor cells. Use the object initializer to set Doors
-    /// after construction (e.g., { Doors = node.Doors }) or pass it directly here.
-    /// </summary>
+    // -- Visual style, resolved from this room's originating RoomTemplateSO -> RoomStyleSO --
+    public TileBase FloorTile;
+    public TileBase WallFrontTile;
+    public TileBase WallTopTile;
+
+    [System.Serializable]
+    public struct EnemySpawn
+    {
+        public Vector2Int WorldCell;
+        public GameObject Prefab;
+    }
+
     public Room(RoomType type, Vector2Int gridPos, int width, int height, DoorDirection doors = DoorDirection.None)
     {
         Type = type;
@@ -66,6 +93,10 @@ public struct Room
         Width = width;
         Height = height;
         Doors = DoorDirection.None;
+        EnemySpawns = System.Array.Empty<EnemySpawn>();
+        FloorTile = null;
+        WallFrontTile = null;
+        WallTopTile = null;
 
         int total = width * height;
         Cells = new RoomCell[total];
