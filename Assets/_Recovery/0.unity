@@ -578,7 +578,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoomCamera
   _target: {fileID: 0}
   _transitionDuration: 0.35
-  _padding: 0
+  _padding: 0.5
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -885,9 +885,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e1412a667850d697a3d9f4b7f3359c5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
-  _moveSpeed: 2.5
+  _moveSpeed: 2
   _rollDuration: 0.3
-  _rollSpeedMultiplier: 2.5
+  _rollSpeedMultiplier: 1
   _rollCooldown: 0.8
 --- !u!114 &848111381
 MonoBehaviour:

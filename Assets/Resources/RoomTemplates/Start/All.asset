@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoomTemplateSO
   Type: 0
   Doors: -1
-  Style: {fileID: 0}
   ObstacleTypes: []
   EnemySpawnPoints: []
   EnemySpawnEntries: []

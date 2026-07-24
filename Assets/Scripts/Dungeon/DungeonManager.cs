@@ -10,10 +10,18 @@ public class DungeonManager : MonoBehaviour
     public bool autoStart = true;
     public int overrideSeed = -1;
 
+    [Header("Room Style")]
+    [Tooltip("Pool of available visual themes. One is chosen at random (seeded, so it's reproducible per seed) each generation and applied to every room — you no longer assign a Style per RoomTemplateSO.")]
+    public RoomStyleSO[] availableStyles;
+
     [Header("Visual — Tilemap containers")]
-    [Tooltip("Floor/wall tiles come from each room's RoomStyleSO (via its RoomTemplateSO). This field just holds the scene's Tilemap component to draw into.")]
+    [Tooltip("Floor/wall tiles come from the randomly chosen RoomStyleSO. This field just holds the scene's Tilemap component to draw into.")]
     public Tilemap floorTilemap;
     public Tilemap wallTilemap;
+
+    [Header("Visual — Void")]
+    [Tooltip("Tilemap for Void cells (pits/chasms within a room's bounds) — painted with the chosen RoomStyleSO's VoidTile. Give it a spot below your floor tilemap in the Sorting Layer order. No collider needed — falling in is handled by PlayerHazardDetector via cell state, not physics.")]
+    public Tilemap voidTilemap;
 
     [Header("Visual — Obstacles (blocking)")]
     [Tooltip("Obstacles that physically stop the player (e.g. rocks). Give it a TilemapCollider2D. Each cell uses its own tile from the RoomTemplateSO obstacle palette.")]
@@ -43,12 +51,16 @@ public class DungeonManager : MonoBehaviour
     private bool _isGenerating;
     private Dictionary<Vector2Int, CellState> _cellLookup;
     private Dictionary<Vector2Int, int> _obstacleHazardDamage;
+    private RoomStyleSO _chosenStyle;
 
     public FloorLayout.DungeonResult CurrentLayout => _currentLayout;
     public Room[] Rooms => _currentLayout.Rooms?.ToArray();
     public Vector2Int StartGridPosition => _currentLayout.StartPosition;
     public Vector3 PlayerSpawnWorldPosition { get; private set; }
     public Vector2Int BossGridPosition => _currentLayout.BossPosition;
+
+    /// <summary>The RoomStyleSO randomly chosen for the current dungeon generation.</summary>
+    public RoomStyleSO ChosenStyle => _chosenStyle;
 
     private static readonly DoorDirection[] AllDirections =
         { DoorDirection.North, DoorDirection.South, DoorDirection.East, DoorDirection.West };
@@ -101,9 +113,11 @@ public class DungeonManager : MonoBehaviour
             else
                 Debug.Log($"[DungeonManager] Generation complete: {_currentLayout.Rooms.Count} rooms, all connected.");
 
+            ApplyRandomRoomStyle();
             BuildCellLookup();
             SpawnDungeonVisuals();
             CalculatePlayerSpawnPosition();
+            PositionPlayerAtSpawn();
         }
         catch (System.Exception ex)
         {
@@ -119,6 +133,34 @@ public class DungeonManager : MonoBehaviour
     {
         SeedManager.Regenerate();
         Initialize();
+    }
+
+    /// <summary>
+    /// Picks one RoomStyleSO from availableStyles using the seeded RNG (so the same seed always
+    /// picks the same style) and applies its floor/wall tiles to every room in the current layout.
+    /// This replaces manually assigning a Style per RoomTemplateSO.
+    /// </summary>
+    private void ApplyRandomRoomStyle()
+    {
+        if (availableStyles == null || availableStyles.Length == 0)
+        {
+            Debug.LogWarning("[DungeonManager] No Room Styles assigned in 'Available Styles' — "
+                + "rooms will render without floor/wall tiles. Assign at least one RoomStyleSO asset.");
+            _chosenStyle = null;
+            return;
+        }
+
+        _chosenStyle = availableStyles[SeedManager.Rng.Next(availableStyles.Length)];
+        Debug.Log($"[DungeonManager] Room style chosen: {_chosenStyle.name}");
+
+        for (int i = 0; i < _currentLayout.Rooms.Count; i++)
+        {
+            Room room = _currentLayout.Rooms[i];
+            room.FloorTile = _chosenStyle.FloorTile;
+            room.WallFrontTile = _chosenStyle.WallFrontTile;
+            room.WallTopTile = _chosenStyle.WallTopTile;
+            _currentLayout.Rooms[i] = room;
+        }
     }
 
     // — Gameplay cell lookup —
@@ -206,6 +248,7 @@ public class DungeonManager : MonoBehaviour
     {
         floorTilemap?.ClearAllTiles();
         wallTilemap?.ClearAllTiles();
+        voidTilemap?.ClearAllTiles();
         decorationTilemap?.ClearAllTiles();
         obstacleTilemap?.ClearAllTiles();
         hazardTilemap?.ClearAllTiles();
@@ -227,8 +270,10 @@ public class DungeonManager : MonoBehaviour
         foreach (var room in _currentLayout.Rooms)
             SpawnRoomFloor(room);
 
+        SpawnVoidTiles();
+
         // Walls are NEVER hand-placed — same philosophy as doors: derived from grid adjacency
-        // of actual occupied cells, using each room's own WallFrontTile/WallTopTile style.
+        // of actual occupied cells, using the randomly chosen style's WallFrontTile/WallTopTile.
         BuildWalls();
         SpawnDecorations();
 
@@ -240,7 +285,7 @@ public class DungeonManager : MonoBehaviour
     private void SpawnRoomFloor(Room room)
     {
         if (room.FloorTile == null)
-            Debug.LogWarning($"[DungeonManager] Room at ({room.GridPos.x},{room.GridPos.y}) has no FloorTile — assign a RoomStyleSO on its RoomTemplateSO.");
+            Debug.LogWarning($"[DungeonManager] Room at ({room.GridPos.x},{room.GridPos.y}) has no FloorTile — assign at least one RoomStyleSO to 'Available Styles'.");
 
         foreach (var cell in room.Cells)
         {
@@ -266,11 +311,42 @@ public class DungeonManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Paints the chosen style's VoidTile onto every Void cell that falls within a room's
+    /// rectangular bounds (pits/chasms inside a room's template, not the gaps between rooms —
+    /// those are never in camera view since RoomCamera frames exactly one room at a time).
+    /// A cell counts as Void here if it's inside the room's Width x Height rectangle but wasn't
+    /// painted as Floor/Obstacle in SpawnRoomFloor (i.e. it's absent from _cellLookup).
+    /// </summary>
+    private void SpawnVoidTiles()
+    {
+        if (voidTilemap == null || _chosenStyle == null || _chosenStyle.VoidTile == null) return;
+        if (_currentLayout.Rooms == null || _cellLookup == null) return;
+
+        var painted = new HashSet<Vector2Int>();
+
+        foreach (var room in _currentLayout.Rooms)
+        {
+            for (int y = 0; y < room.Height; y++)
+            {
+                for (int x = 0; x < room.Width; x++)
+                {
+                    Vector2Int cellPos = new Vector2Int(room.GridPos.x + x, room.GridPos.y + y);
+
+                    if (_cellLookup.ContainsKey(cellPos)) continue; // Floor or Obstacle — not void
+                    if (!painted.Add(cellPos)) continue; // already painted (room rectangles don't overlap, but stay safe)
+
+                    voidTilemap.SetTile(new Vector3Int(cellPos.x, cellPos.y, 0), _chosenStyle.VoidTile);
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// Walls are derived per-room, never hand-placed: whatever cell borders an occupied cell but
-    /// isn't itself occupied becomes a wall tile, styled using the owning room's WallFrontTile.
-    /// On a room's north-facing wall specifically, an extra WallTopTile is stacked one cell
-    /// higher to fake the taller "top wall" silhouette (32x32 pieces stacked, not a single
-    /// tall sprite).
+    /// isn't itself occupied becomes a wall tile, styled using the owning room's WallFrontTile
+    /// (set from the randomly chosen RoomStyleSO). On a room's north-facing wall specifically, an
+    /// extra WallTopTile is stacked one cell higher to fake the taller "top wall" silhouette
+    /// (32x32 pieces stacked, not a single tall sprite).
     /// </summary>
     private void BuildWalls()
     {
@@ -281,7 +357,7 @@ public class DungeonManager : MonoBehaviour
 
         foreach (var room in _currentLayout.Rooms)
         {
-            if (room.WallFrontTile == null) continue; // no wall style defined for this room's style
+            if (room.WallFrontTile == null) continue; // no wall style resolved for this room
 
             foreach (var cell in room.Cells)
             {
@@ -410,6 +486,21 @@ public class DungeonManager : MonoBehaviour
         }
 
         PlayerSpawnWorldPosition = spawnPos + spawnOffset;
+    }
+
+    /// <summary>Moves the player (if present in the scene) to the calculated spawn position.
+    /// Called right after CalculatePlayerSpawnPosition() during Initialize()/Regenerate().</summary>
+    private void PositionPlayerAtSpawn()
+    {
+        if (PlayerMovement.Instance == null)
+        {
+            Debug.LogWarning("[DungeonManager] No PlayerMovement.Instance found in the scene — "
+                + "can't move the player to the spawn point. Make sure the Player object is active "
+                + "before dungeon generation runs.");
+            return;
+        }
+
+        PlayerMovement.Instance.TeleportTo(PlayerSpawnWorldPosition);
     }
 
     private Vector3 GetRoomCornerWorld(Vector2Int gridPos) => new Vector3(gridPos.x, gridPos.y, 0f);

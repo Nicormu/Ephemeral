@@ -2,10 +2,10 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Reusable visual theme for rooms: one floor tile plus the two wall pieces (front face +
-/// optional top cap for the false-depth look). Multiple RoomTemplateSO assets can reference
-/// the same RoomStyleSO so a whole floor (cave, dungeon, cathedral, etc.) shares one look
-/// without re-assigning tiles on every template.
+/// Reusable visual theme for rooms: floor, wall pieces, and an optional void tile.
+/// Multiple RoomTemplateSO assets share the same look via one randomly chosen RoomStyleSO
+/// per dungeon generation (see DungeonManager.ApplyRandomRoomStyle) — never assigned by hand
+/// on individual templates.
 /// </summary>
 [CreateAssetMenu(fileName = "NewRoomStyle", menuName = "Dungeon/Room Style")]
 public class RoomStyleSO : ScriptableObject
@@ -18,4 +18,7 @@ public class RoomStyleSO : ScriptableObject
 
     [Tooltip("Optional cap piece stacked directly above WallFrontTile, only on a room's north-facing wall, to fake the taller 'top wall' silhouette (two 32x32 pieces stacked instead of one tall sprite). Leave empty to skip the cap.")]
     public TileBase WallTopTile;
+
+    [Tooltip("Tile drawn for Void cells within a room's bounds (pits/chasms the player can fall into — see PlayerHazardDetector). Leave empty to leave Void cells unrendered, as before.")]
+    public TileBase VoidTile;
 }

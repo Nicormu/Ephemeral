@@ -11,6 +11,8 @@ public class RoomTemplate
     public (Vector2Int pos, CellState state, TileBase obstacleTile, bool obstacleBlocksMovement, int obstacleDamage)[] Cells { get; set; }
     public (Vector2Int pos, GameObject prefab)[] EnemySpawns { get; set; }
 
+    // Populated later by DungeonManager after a style is randomly chosen for the whole dungeon —
+    // not sourced from the template itself anymore. See DungeonManager.ApplyRandomRoomStyle().
     public TileBase FloorTile { get; set; }
     public TileBase WallFrontTile { get; set; }
     public TileBase WallTopTile { get; set; }
@@ -38,18 +40,15 @@ public class RoomTemplate
             }
         }
 
-        if (so.Style == null)
-            Debug.LogWarning($"[RoomTemplate] '{so.name}' has no Style assigned — this room will render without floor/wall tiles. Create or assign a RoomStyleSO.");
-
         return new RoomTemplate
         {
             Type = so.Type,
             Doors = so.Doors,
             Cells = so.GetOccupiedCells(),
             EnemySpawns = enemySpawns.ToArray(),
-            FloorTile = so.Style != null ? so.Style.FloorTile : null,
-            WallFrontTile = so.Style != null ? so.Style.WallFrontTile : null,
-            WallTopTile = so.Style != null ? so.Style.WallTopTile : null
+            FloorTile = null,
+            WallFrontTile = null,
+            WallTopTile = null
         };
     }
 }

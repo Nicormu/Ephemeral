@@ -64,15 +64,15 @@ public class PlayerMovement : MonoBehaviour
                 break;
 
             case PlayerState.Rolling:
-                HandleRolling();
+                // HandleRolling();
                 break;
         }
     }
 
     private void Update()
     {
-        // Rolling can be triggered at any time (except during another roll).
-        TryStartRoll();
+        // Rolling disabled:
+        // TryStartRoll();
 
         // Record the last facing direction so a roll immediately after spawn
         // still goes somewhere sensible instead of defaulting to +X.
@@ -99,6 +99,10 @@ public class PlayerMovement : MonoBehaviour
 
     private void TryStartRoll()
     {
+        // Rolling disabled
+        return;
+
+        /*
         // Don't allow rolling while already rolling.
         if (_currentState == PlayerState.Rolling)
             return;
@@ -112,6 +116,7 @@ public class PlayerMovement : MonoBehaviour
             return;
 
         StartRoll();
+        */
     }
 
     private void StartRoll()
@@ -162,24 +167,28 @@ public class PlayerMovement : MonoBehaviour
 
     #region Rolling
 
-    private void HandleRolling()
+    // private void HandleRolling()
+    // {
+    //     ...
+    // }
+
+    #endregion
+
+    #region Teleport
+
+    /// <summary>
+    /// Instantly moves the player to a new position and clears any residual velocity/roll state.
+    /// Use this for spawn placement and hazard recovery instead of setting transform.position
+    /// directly, so momentum from before the teleport doesn't leak into the new location.
+    /// </summary>
+    public void TeleportTo(Vector3 worldPosition)
     {
-        float elapsed = Time.time - _lastRollTime;
+        transform.position = worldPosition;
 
-        if (elapsed >= _rollDuration)
-        {
-            SetState(PlayerState.Idle);
-            return;
-        }
+        if (_rb != null)
+            _rb.linearVelocity = Vector2.zero;
 
-        // Calculate roll velocity in the last known facing direction.
-        float rollSpeed = _moveSpeed * _rollSpeedMultiplier;
-        Vector2 facingForRoll = _lastFacingDirection.normalized;
-        if (facingForRoll.sqrMagnitude < Mathf.Epsilon)
-            facingForRoll = _currentDirection.normalized; // fallback to current input.
-        Vector2 rollVelocity = facingForRoll * rollSpeed;
-
-        _rb.linearVelocity = rollVelocity;
+        SetState(PlayerState.Idle);
     }
 
     #endregion

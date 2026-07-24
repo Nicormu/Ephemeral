@@ -11,10 +11,6 @@ public class RoomTemplateSO : ScriptableObject
     public RoomType Type;
     public DoorDirection Doors;
 
-    [Header("Visual Style")]
-    [Tooltip("Reusable style asset (floor tile + wall tiles). Multiple templates can share the same RoomStyleSO to keep a consistent theme.")]
-    public RoomStyleSO Style;
-
     [Header("Obstacles")]
     [Tooltip("Palette of obstacle types available when painting the grid below. Each type defines its own visual, whether it blocks movement, and damage dealt if it doesn't (e.g. fire).")]
     public List<ObstacleTypeDefinition> ObstacleTypes = new();
