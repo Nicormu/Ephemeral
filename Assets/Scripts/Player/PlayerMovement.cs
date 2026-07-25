@@ -12,15 +12,15 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Speed at which the player moves while walking.")]
     [SerializeField] private float _moveSpeed = 3f;
 
-    [Header("Rolling")]
-    [Tooltip("Duration of the roll in seconds.")]
-    [SerializeField] private float _rollDuration = 0.3f;
+    //[Header("Rolling")]
+    //[Tooltip("Duration of the roll in seconds.")]
+    //[SerializeField] private float _rollDuration = 0.3f;
 
     [Tooltip("Speed during the roll (multiplier over base move speed).")]
-    [SerializeField] private float _rollSpeedMultiplier = 2.5f;
+    //[SerializeField] private float _rollSpeedMultiplier = 2.5f;
 
-    [Tooltip("Cooldown between rolls in seconds.")]
-    [SerializeField] private float _rollCooldown = 0.5f;
+    //[Tooltip("Cooldown between rolls in seconds.")]
+    //[SerializeField] private float _rollCooldown = 0.5f;
 
     // -- component refs --
     private Rigidbody2D _rb;

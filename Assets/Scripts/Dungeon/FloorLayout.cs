@@ -234,7 +234,9 @@ public static class FloorLayout
             room.Cells = BuildAbsoluteCells(template.Cells, tileOrigin);
             room.EnemySpawns = BuildAbsoluteEnemySpawns(template.EnemySpawns, tileOrigin);
             room.FloorTile = template.FloorTile;
-            room.WallFrontTile = template.WallFrontTile;
+            room.TopWallTile = template.TopWallTile;
+            room.BottomWallTile = template.BottomWallTile;
+            room.SideWallTile = template.SideWallTile;
             room.WallTopTile = template.WallTopTile;
             rooms.Add(room);
         }

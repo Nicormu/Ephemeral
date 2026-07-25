@@ -14,7 +14,9 @@ public class RoomTemplate
     // Populated later by DungeonManager after a style is randomly chosen for the whole dungeon —
     // not sourced from the template itself anymore. See DungeonManager.ApplyRandomRoomStyle().
     public TileBase FloorTile { get; set; }
-    public TileBase WallFrontTile { get; set; }
+    public TileBase TopWallTile { get; set; }
+    public TileBase BottomWallTile { get; set; }
+    public TileBase SideWallTile { get; set; }
     public TileBase WallTopTile { get; set; }
 
     public int Width => RoomTileSize.x;
@@ -47,7 +49,9 @@ public class RoomTemplate
             Cells = so.GetOccupiedCells(),
             EnemySpawns = enemySpawns.ToArray(),
             FloorTile = null,
-            WallFrontTile = null,
+            TopWallTile = null,
+            BottomWallTile = null,
+            SideWallTile = null,
             WallTopTile = null
         };
     }

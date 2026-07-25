@@ -13,12 +13,15 @@ public class RoomStyleSO : ScriptableObject
     [Tooltip("The single floor tile used for every Floor cell in rooms using this style. Floors stay visually simple on purpose — variety comes from the Decoration tilemap, not multiple floor tiles.")]
     public TileBase FloorTile;
 
-    [Tooltip("Wall piece used for the wall's visible face — the 'front'/lower part of the wall.")]
-    public TileBase WallFrontTile;
+    [Tooltip("Rule Tile used for the room's North (top) wall — handles straight runs, corners, and door gaps.")]
+    public TileBase TopWallTile;
 
-    [Tooltip("Optional cap piece stacked directly above WallFrontTile, only on a room's north-facing wall, to fake the taller 'top wall' silhouette (two 32x32 pieces stacked instead of one tall sprite). Leave empty to skip the cap.")]
-    public TileBase WallTopTile;
+    [Tooltip("Rule Tile used for the room's South (bottom) wall — handles straight runs, corners, and door gaps.")]
+    public TileBase BottomWallTile;
 
+    [Tooltip("Rule Tile used for the room's East and West (side) walls. East is rendered as a horizontal mirror of this same tile at paint time — no separate asset needed.")]
+    public TileBase SideWallTile;
+    
     [Tooltip("Tile drawn for Void cells within a room's bounds (pits/chasms the player can fall into — see PlayerHazardDetector). Leave empty to leave Void cells unrendered, as before.")]
     public TileBase VoidTile;
 }

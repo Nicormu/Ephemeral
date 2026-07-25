@@ -76,7 +76,9 @@ public struct Room
 
     // -- Visual style, resolved from this room's originating RoomTemplateSO -> RoomStyleSO --
     public TileBase FloorTile;
-    public TileBase WallFrontTile;
+    public TileBase TopWallTile;
+    public TileBase BottomWallTile;
+    public TileBase SideWallTile;
     public TileBase WallTopTile;
 
     [System.Serializable]
@@ -95,7 +97,9 @@ public struct Room
         Doors = DoorDirection.None;
         EnemySpawns = System.Array.Empty<EnemySpawn>();
         FloorTile = null;
-        WallFrontTile = null;
+        TopWallTile = null;
+        BottomWallTile = null;
+        SideWallTile = null;
         WallTopTile = null;
 
         int total = width * height;

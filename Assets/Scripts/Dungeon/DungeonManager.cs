@@ -31,10 +31,18 @@ public class DungeonManager : MonoBehaviour
     [Tooltip("Obstacles the player can walk over but that damage them (e.g. fire). No collider needed — PlayerHazardDetector handles the damage. Each cell uses its own tile from the RoomTemplateSO obstacle palette.")]
     public Tilemap hazardTilemap;
 
-    [Header("Visual — Decoration (optional)")]
+    [Header("Visual — Decoration (optional, floor)")]
     public Tilemap decorationTilemap;
     public TileBase[] decorationTileVariants;
     [Range(0f, 1f)] public float decorationChance = 0.08f;
+
+    [Header("Visual — Wall Decoration (optional)")]
+    [Tooltip("Separate tilemap for wall decorations (torches, cracks, moss, etc.) — kept apart from floor decoration since the art and sorting layer needs are usually different.")]
+    public Tilemap wallDecorationTilemap;
+    [Tooltip("Tile variants painted onto wall cells. One is picked at random per decorated wall cell.")]
+    public TileBase[] wallDecorationTileVariants;
+    [Tooltip("Chance, per exterior wall cell, that a decoration is painted there. Cells where a door will spawn are always skipped.")]
+    [Range(0f, 1f)] public float wallDecorationChance = 0.08f;
 
     [Header("Doors")]
     [Tooltip("Prefab with a Door component. Instantiated once per shared edge between two adjacent rooms.")]
@@ -52,6 +60,8 @@ public class DungeonManager : MonoBehaviour
     private Dictionary<Vector2Int, CellState> _cellLookup;
     private Dictionary<Vector2Int, int> _obstacleHazardDamage;
     private RoomStyleSO _chosenStyle;
+    private HashSet<Vector2Int> _wallPositions;
+    private HashSet<Vector2Int> _doorWallCells;
 
     public FloorLayout.DungeonResult CurrentLayout => _currentLayout;
     public Room[] Rooms => _currentLayout.Rooms?.ToArray();
@@ -64,6 +74,8 @@ public class DungeonManager : MonoBehaviour
 
     private static readonly DoorDirection[] AllDirections =
         { DoorDirection.North, DoorDirection.South, DoorDirection.East, DoorDirection.West };
+
+    private static readonly Matrix4x4 FlipXMatrix = Matrix4x4.Scale(new Vector3(-1f, 1f, 1f));
 
     void Awake()
     {
@@ -157,8 +169,9 @@ public class DungeonManager : MonoBehaviour
         {
             Room room = _currentLayout.Rooms[i];
             room.FloorTile = _chosenStyle.FloorTile;
-            room.WallFrontTile = _chosenStyle.WallFrontTile;
-            room.WallTopTile = _chosenStyle.WallTopTile;
+            room.TopWallTile = _chosenStyle.TopWallTile;
+            room.BottomWallTile = _chosenStyle.BottomWallTile;
+            room.SideWallTile = _chosenStyle.SideWallTile;
             _currentLayout.Rooms[i] = room;
         }
     }
@@ -250,6 +263,7 @@ public class DungeonManager : MonoBehaviour
         wallTilemap?.ClearAllTiles();
         voidTilemap?.ClearAllTiles();
         decorationTilemap?.ClearAllTiles();
+        wallDecorationTilemap?.ClearAllTiles();
         obstacleTilemap?.ClearAllTiles();
         hazardTilemap?.ClearAllTiles();
 
@@ -273,9 +287,15 @@ public class DungeonManager : MonoBehaviour
         SpawnVoidTiles();
 
         // Walls are NEVER hand-placed — same philosophy as doors: derived from grid adjacency
-        // of actual occupied cells, using the randomly chosen style's WallFrontTile/WallTopTile.
+        // of actual occupied cells, using the randomly chosen style's directional wall Rule Tiles.
         BuildWalls();
+
+        // Doors are computed (not yet spawned) here so wall decoration can avoid those cells;
+        // the actual Door GameObjects are still created later, in SpawnDoors().
+        ComputeDoorWallCells();
+
         SpawnDecorations();
+        SpawnWallDecorations();
 
         // Must run before SpawnDoors(): doors look up rooms by GridPos to know when to open.
         SpawnRoomControllersAndEnemies();
@@ -343,22 +363,25 @@ public class DungeonManager : MonoBehaviour
 
     /// <summary>
     /// Walls are derived per-room, never hand-placed: whatever cell borders an occupied cell but
-    /// isn't itself occupied becomes a wall tile, styled using the owning room's WallFrontTile
-    /// (set from the randomly chosen RoomStyleSO). On a room's north-facing wall specifically, an
-    /// extra WallTopTile is stacked one cell higher to fake the taller "top wall" silhouette
-    /// (32x32 pieces stacked, not a single tall sprite).
+    /// isn't itself occupied becomes a wall tile. Which Rule Tile gets used depends on which side
+    /// of the room the wall is on — North uses TopWallTile, South uses BottomWallTile, and East/West
+    /// both use SideWallTile (East is painted as a horizontal mirror of the same asset, so only one
+    /// side tileset needs to be authored). On a room's north-facing wall specifically, an extra
+    /// WallTopTile is stacked one cell higher to fake the taller "top wall" silhouette (32x32 pieces
+    /// stacked, not a single tall sprite).
+    /// Also records every painted wall cell into _wallPositions, so SpawnWallDecorations() knows
+    /// exactly which cells are eligible for a wall decoration.
     /// </summary>
     private void BuildWalls()
     {
+        _wallPositions = new HashSet<Vector2Int>();
+
         if (wallTilemap == null || _cellLookup == null || _currentLayout.Rooms == null) return;
 
-        var paintedFront = new HashSet<Vector2Int>();
         var paintedTop = new HashSet<Vector2Int>();
 
         foreach (var room in _currentLayout.Rooms)
         {
-            if (room.WallFrontTile == null) continue; // no wall style resolved for this room
-
             foreach (var cell in room.Cells)
             {
                 Vector2Int cellPos = cell.CellPos;
@@ -368,8 +391,24 @@ public class DungeonManager : MonoBehaviour
                     Vector2Int wallPos = cellPos + UnitOffset(dir);
                     if (_cellLookup.ContainsKey(wallPos)) continue; // occupied — this isn't a wall position
 
-                    if (paintedFront.Add(wallPos))
-                        wallTilemap.SetTile(new Vector3Int(wallPos.x, wallPos.y, 0), room.WallFrontTile);
+                    TileBase wallTile = dir switch
+                    {
+                        DoorDirection.North => room.TopWallTile,
+                        DoorDirection.South => room.BottomWallTile,
+                        DoorDirection.East  => room.SideWallTile,
+                        DoorDirection.West  => room.SideWallTile,
+                        _ => null
+                    };
+                    if (wallTile == null) continue; // no wall style resolved for this side
+
+                    if (_wallPositions.Add(wallPos))
+                    {
+                        var tilePos = new Vector3Int(wallPos.x, wallPos.y, 0);
+                        wallTilemap.SetTile(tilePos, wallTile);
+
+                        // East is the same art as West, mirrored horizontally at paint time.
+                        wallTilemap.SetTransformMatrix(tilePos, dir == DoorDirection.East ? FlipXMatrix : Matrix4x4.identity);
+                    }
 
                     if (dir == DoorDirection.North && room.WallTopTile != null)
                     {
@@ -379,6 +418,28 @@ public class DungeonManager : MonoBehaviour
                     }
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Precomputes the grid cell each door will occupy (mirrors the math in PlaceDoor) without
+    /// actually spawning anything. Only North/East flags are used — same reasoning as SpawnDoors:
+    /// a South/West door is always the other side of some neighboring room's North/East door, so
+    /// it's already covered when that neighbor is processed. Used by SpawnWallDecorations() to
+    /// skip cells that are about to get a door.
+    /// </summary>
+    private void ComputeDoorWallCells()
+    {
+        _doorWallCells = new HashSet<Vector2Int>();
+        if (_currentLayout.Rooms == null) return;
+
+        foreach (var room in _currentLayout.Rooms)
+        {
+            if ((room.Doors & DoorDirection.North) != 0)
+                _doorWallCells.Add(new Vector2Int(room.GridPos.x + room.Width / 2, room.GridPos.y + room.Height));
+
+            if ((room.Doors & DoorDirection.East) != 0)
+                _doorWallCells.Add(new Vector2Int(room.GridPos.x + room.Width, room.GridPos.y + room.Height / 2));
         }
     }
 
@@ -393,6 +454,26 @@ public class DungeonManager : MonoBehaviour
 
             TileBase deco = decorationTileVariants[SeedManager.Rng.Next(decorationTileVariants.Length)];
             decorationTilemap.SetTile(new Vector3Int(kv.Key.x, kv.Key.y, 0), deco);
+        }
+    }
+
+    /// <summary>
+    /// Paints wall decorations (torches, cracks, moss, etc.) onto a random subset of exterior
+    /// wall cells, using their own tilemap/variant list/chance so they never mix with floor
+    /// decoration art. Cells reserved for a door (see ComputeDoorWallCells) are always skipped.
+    /// </summary>
+    private void SpawnWallDecorations()
+    {
+        if (wallDecorationTilemap == null || wallDecorationTileVariants == null || wallDecorationTileVariants.Length == 0) return;
+        if (_wallPositions == null) return;
+
+        foreach (var wallPos in _wallPositions)
+        {
+            if (_doorWallCells != null && _doorWallCells.Contains(wallPos)) continue; // reserved for a door
+            if (SeedManager.Rng.NextDouble() > wallDecorationChance) continue;
+
+            TileBase deco = wallDecorationTileVariants[SeedManager.Rng.Next(wallDecorationTileVariants.Length)];
+            wallDecorationTilemap.SetTile(new Vector3Int(wallPos.x, wallPos.y, 0), deco);
         }
     }
 
