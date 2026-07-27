@@ -577,6 +577,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomCamera
   _target: {fileID: 0}
+  _instantSnap: 1
   _transitionDuration: 0.35
   _padding: 0.5
 --- !u!1 &619394800
@@ -886,9 +887,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   _moveSpeed: 2
-  _rollDuration: 0.3
-  _rollSpeedMultiplier: 1
-  _rollCooldown: 0.8
 --- !u!114 &848111381
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -959,7 +957,11 @@ MonoBehaviour:
   decorationTilemap: {fileID: 1720484478}
   decorationTileVariants: []
   decorationChance: 0.08
-  doorPrefab: {fileID: 0}
+  wallDecorationTilemap: {fileID: 0}
+  wallDecorationTileVariants: []
+  wallDecorationChance: 0.08
+  horizontalDoorPrefab: {fileID: 0}
+  verticalDoorPrefab: {fileID: 0}
   spawnMode: 1
   spawnOffset: {x: 0, y: 0, z: 0}
 --- !u!4 &967368263

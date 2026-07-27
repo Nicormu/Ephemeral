@@ -4,8 +4,8 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Generates a dungeon layout using a graph-based, queue-driven BFS algorithm — mirroring
-/// the commonly documented approach used in The Binding of Isaac.
+/// Genera un layout de dungeon usando un algoritmo BFS orientado a grafo — reflejando el
+/// enfoque com�nmente documentado de The Binding of Isaac.
 /// </summary>
 public static class FloorLayout
 {
@@ -215,6 +215,13 @@ public static class FloorLayout
     {
         var rooms = new List<Room>();
 
+        // Cada "celda" del grafo (kv.Key) sigue siendo un paso de 1 unidad en el espacio l�gico
+        // del BFS. Al pasar a coordenadas de tile la multiplicamos por (tama�o de sala + gap),
+        // en vez de solo el tama�o de sala, para que las salas queden separadas por
+        // DungeonGridConstants.RoomGap tiles vac�os en vez de pegadas borde con borde.
+        int strideX = RoomTemplate.RoomTileSize.x + DungeonGridConstants.RoomGap;
+        int strideY = RoomTemplate.RoomTileSize.y + DungeonGridConstants.RoomGap;
+
         foreach (var kv in cells)
         {
             var node = kv.Value;
@@ -226,8 +233,8 @@ public static class FloorLayout
             }
 
             Vector2Int tileOrigin = new Vector2Int(
-                kv.Key.x * RoomTemplate.RoomTileSize.x,
-                kv.Key.y * RoomTemplate.RoomTileSize.y
+                kv.Key.x * strideX,
+                kv.Key.y * strideY
             );
 
             Room room = new Room(node.Type, tileOrigin, template.Width, template.Height, node.Doors);
@@ -328,7 +335,8 @@ public static class FloorLayout
         Room start = new Room(RoomType.Start, Vector2Int.zero, RoomTemplate.RoomTileSize.x, RoomTemplate.RoomTileSize.y)
         { Doors = DoorDirection.East };
 
-        Vector2Int bossOrigin = new Vector2Int(RoomTemplate.RoomTileSize.x, 0);
+        int strideX = RoomTemplate.RoomTileSize.x + DungeonGridConstants.RoomGap;
+        Vector2Int bossOrigin = new Vector2Int(strideX, 0);
         Room boss = new Room(RoomType.Boss, bossOrigin, RoomTemplate.RoomTileSize.x, RoomTemplate.RoomTileSize.y)
         { Doors = DoorDirection.West };
 

@@ -45,10 +45,10 @@ public class DungeonManager : MonoBehaviour
     [Range(0f, 1f)] public float wallDecorationChance = 0.08f;
 
     [Header("Doors")]
-    [Tooltip("Prefab with a Door component, drawn for a HORIZONTAL wall segment (room's North/South edge — door spans left-to-right). Instantiated once per shared horizontal edge between two adjacent rooms.")]
+    [Tooltip("Prefab with a Door component, drawn for a HORIZONTAL wall segment (room's North/South edge — door spans left-to-right). Instantiated once per room per North/South door flag — each room now gets its own door object, since rooms are separated by a gap (see DungeonGridConstants.RoomGap) instead of sharing a wall tile.")]
     public GameObject horizontalDoorPrefab;
 
-    [Tooltip("Prefab with a Door component, drawn for a VERTICAL wall segment (room's East/West edge — door spans top-to-bottom). Instantiated once per shared vertical edge between two adjacent rooms. Leave empty to fall back to doorPrefab rotated 90°.")]
+    [Tooltip("Prefab with a Door component, drawn for a VERTICAL wall segment (room's East/West edge — door spans top-to-bottom). Instantiated once per room per East/West door flag. Leave empty to fall back to horizontalDoorPrefab rotated 90°.")]
     public GameObject verticalDoorPrefab;
 
     [Header("Player Spawn")]
@@ -194,6 +194,17 @@ public class DungeonManager : MonoBehaviour
 
                 if (cell.State == CellState.Obstacle && !cell.ObstacleBlocksMovement && cell.ObstacleDamage > 0)
                     _obstacleHazardDamage[cell.CellPos] = cell.ObstacleDamage;
+            }
+
+            // Door threshold tiles sit just outside the room's own floor rect, in the gap
+            // between rooms (see DungeonGridConstants.RoomGap) — they're absent from
+            // room.Cells, so without this they'd read as CellState.Void and PlayerHazardDetector
+            // would fall-damage the player mid-doorway, before ever reaching a door's
+            // EntryTrigger. Registering them as Floor here keeps door tiles walkable.
+            foreach (var dir in AllDirections)
+            {
+                if ((room.Doors & dir) == 0) continue;
+                _cellLookup[GetDoorWallCell(room, dir)] = CellState.Floor;
             }
         }
     }
@@ -369,12 +380,9 @@ public class DungeonManager : MonoBehaviour
     /// of THAT ROOM'S OWN occupied cells but isn't itself one of that room's own cells becomes a
     /// wall — UNLESS it's exactly that room's door position for that side, which is left open.
     ///
-    /// Deliberately checked against the room's own cell set rather than the dungeon-wide
-    /// _cellLookup: two rooms can sit directly adjacent on the grid without being connected by a
-    /// door, and _cellLookup would report that boundary as "occupied" (by the neighboring room),
-    /// silently skipping the wall along the whole shared edge instead of just the door's single
-    /// tile. Using each room's own cells avoids that and paints a full wall except exactly where
-    /// a door belongs.
+    /// Since rooms are now separated by a gap (DungeonGridConstants.RoomGap) instead of sitting
+    /// flush against each other, every room's own cell set is naturally distinct from its
+    /// neighbors' — there's no longer any risk of two rooms' floors touching at a shared edge.
     ///
     /// Which Rule Tile gets used depends on which side of the room the wall is on — North uses
     /// TopWallTile, South uses BottomWallTile, and East/West both use SideWallTile (East is
@@ -404,13 +412,6 @@ public class DungeonManager : MonoBehaviour
 
         foreach (var room in _currentLayout.Rooms)
         {
-            // Built from THIS room's own cells only — deliberately NOT the dungeon-wide
-            // _cellLookup. Two rooms can sit directly adjacent on the grid without being
-            // connected by a door, and _cellLookup would report that shared boundary as
-            // "occupied" (by the neighboring room's floor), silently skipping the wall along
-            // the whole shared edge instead of just the door's single tile. Using each room's
-            // own cells means a wall is painted along the full edge except exactly where this
-            // room's own door belongs (see IsRoomDoorCell below).
             var roomCells = new HashSet<Vector2Int>();
             foreach (var cell in room.Cells)
                 roomCells.Add(cell.CellPos);
@@ -426,8 +427,7 @@ public class DungeonManager : MonoBehaviour
                     // Interior to this same room — not a wall position.
                     if (roomCells.Contains(wallPos)) continue;
 
-                    // Leave exactly this room's door gap open on this side, regardless of
-                    // whether a neighboring room's floor happens to sit beyond it.
+                    // Leave exactly this room's door gap open on this side.
                     if (IsRoomDoorCell(room, wallPos, dir)) continue;
 
                     TileBase wallTile = dir switch
@@ -463,12 +463,6 @@ public class DungeonManager : MonoBehaviour
             // North wall corners: one cell BEYOND the room's floor width on each side, so the
             // North wall row ends up Width + 2 cells wide (corner + Width normal cells + corner)
             // instead of the corners eating into the Width cells directly above the floor.
-            // These two cells are never produced by the per-floor-cell loop above (they aren't
-            // directly north of any floor cell — they're diagonally outside the room's rectangle),
-            // so they're painted explicitly here. The corner sprite itself is still resolved by
-            // TopWallTile's own Rule Tile ("no neighbor to the west/east" rule) — same asset, same
-            // rules, just now applied to the two outermost cells of a 15-wide row instead of a
-            // 13-wide one.
             PaintNorthWallCorners(room);
             PaintSouthWallCorners(room);
         }
@@ -486,33 +480,33 @@ public class DungeonManager : MonoBehaviour
 
     /// <summary>
     /// True if wallPos is exactly this room's door tile on side dir (a single tile, centered on
-    /// that side, matching where SpawnDoors/PlaceDoor puts the actual Door GameObject). Doesn't
-    /// check whether a neighboring room actually exists there — ComputeDoors() (FloorLayout) only
-    /// ever sets a door flag when there IS a connected neighbor, so this is safe on its own.
+    /// that side, matching where SpawnDoors/PlaceDoor puts the actual Door GameObject).
     /// </summary>
     private static bool IsRoomDoorCell(Room room, Vector2Int wallPos, DoorDirection dir)
     {
         if ((room.Doors & dir) == 0) return false;
-
-        Vector2Int doorCell = dir switch
-        {
-            DoorDirection.North => new Vector2Int(room.GridPos.x + room.Width / 2, room.GridPos.y + room.Height),
-            DoorDirection.South => new Vector2Int(room.GridPos.x + room.Width / 2, room.GridPos.y - 1),
-            DoorDirection.East  => new Vector2Int(room.GridPos.x + room.Width, room.GridPos.y + room.Height / 2),
-            DoorDirection.West  => new Vector2Int(room.GridPos.x - 1, room.GridPos.y + room.Height / 2),
-            _ => wallPos + Vector2Int.one // never matches
-        };
-
-        return wallPos == doorCell;
+        return wallPos == GetDoorWallCell(room, dir);
     }
 
     /// <summary>
+    /// The single grid cell, in absolute world-tile coordinates, that a room's door on side dir
+    /// occupies — the wall tile immediately outside the room's floor rect. Shared by wall
+    /// building (IsRoomDoorCell), wall-decoration exclusion (ComputeDoorWallCells), the
+    /// door-threshold Floor registration (BuildCellLookup), and door spawning (PlaceDoor), so
+    /// they all agree on exactly where a door sits.
+    /// </summary>
+    private static Vector2Int GetDoorWallCell(Room room, DoorDirection dir) => dir switch
+    {
+        DoorDirection.North => new Vector2Int(room.GridPos.x + room.Width / 2, room.GridPos.y + room.Height),
+        DoorDirection.South => new Vector2Int(room.GridPos.x + room.Width / 2, room.GridPos.y - 1),
+        DoorDirection.East  => new Vector2Int(room.GridPos.x + room.Width, room.GridPos.y + room.Height / 2),
+        DoorDirection.West  => new Vector2Int(room.GridPos.x - 1, room.GridPos.y + room.Height / 2),
+        _ => room.GridPos
+    };
+
+    /// <summary>
     /// Paints the two North-wall corner cells for a room, one cell outside the floor rectangle
-    /// on each side (see BuildWalls). Skipped if that exact cell was already painted — e.g. by a
-    /// horizontally-adjacent room's own wall — so two neighboring rooms never overwrite each
-    /// other's tile at the shared boundary. Once side walls exist, that shared cell is meant to
-    /// resolve to the same corner sprite regardless of which room "claims" it first, since both
-    /// walls use the same TopWallTile asset with the same rules.
+    /// on each side (see BuildWalls). Skipped if that exact cell was already painted.
     /// </summary>
     private void PaintNorthWallCorners(Room room)
     {
@@ -534,9 +528,8 @@ public class DungeonManager : MonoBehaviour
     {
         if (room.BottomWallTile == null) return;
 
-        // South walls are placed one tile below the room's bottom edge (y - 1)
-        int wallY = room.GridPos.y - 1; 
-        
+        int wallY = room.GridPos.y - 1;
+
         Vector2Int leftCorner  = new Vector2Int(room.GridPos.x - 1, wallY);
         Vector2Int rightCorner = new Vector2Int(room.GridPos.x + room.Width, wallY);
 
@@ -552,11 +545,10 @@ public class DungeonManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Precomputes the grid cell each door will occupy (mirrors the math in PlaceDoor) without
-    /// actually spawning anything. Only North/East flags are used — same reasoning as SpawnDoors:
-    /// a South/West door is always the other side of some neighboring room's North/East door, so
-    /// it's already covered when that neighbor is processed. Used by SpawnWallDecorations() to
-    /// skip cells that are about to get a door.
+    /// Precomputes every grid cell that will get a door — now including all four directions per
+    /// room, since each room spawns its own physical door on every side it's flagged for (rooms
+    /// no longer share a single door tile at a boundary — see PlaceDoor). Used by
+    /// SpawnWallDecorations() to skip cells that are about to get a door.
     /// </summary>
     private void ComputeDoorWallCells()
     {
@@ -564,13 +556,9 @@ public class DungeonManager : MonoBehaviour
         if (_currentLayout.Rooms == null) return;
 
         foreach (var room in _currentLayout.Rooms)
-        {
-            if ((room.Doors & DoorDirection.North) != 0)
-                _doorWallCells.Add(new Vector2Int(room.GridPos.x + room.Width / 2, room.GridPos.y + room.Height));
-
-            if ((room.Doors & DoorDirection.East) != 0)
-                _doorWallCells.Add(new Vector2Int(room.GridPos.x + room.Width, room.GridPos.y + room.Height / 2));
-        }
+            foreach (var dir in AllDirections)
+                if ((room.Doors & dir) != 0)
+                    _doorWallCells.Add(GetDoorWallCell(room, dir));
     }
 
     private void SpawnDecorations()
@@ -626,54 +614,75 @@ public class DungeonManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Spawns one door per shared edge between two adjacent rooms. ComputeDoors() (in FloorLayout)
-    /// always assigns matching opposite doors on both sides of an edge, so acting only on
-    /// North/East flags is enough — the South/West side of the same pair is handled by the
-    /// neighboring room's own North/East flag. This avoids spawning the same door twice.
+    /// Spawns one door PER ROOM per flagged direction — since rooms are now separated by a gap
+    /// (DungeonGridConstants.RoomGap) instead of touching, a connection between two rooms is two
+    /// independent physical doors (one on each room's own edge), not one shared tile. Walking
+    /// through either door teleports the player straight into the other room (see PlaceDoor).
     /// </summary>
     private void SpawnDoors()
     {
-        if (horizontalDoorPrefab == null || _currentLayout.Rooms == null) return;
+        if (_currentLayout.Rooms == null) return;
 
         foreach (var room in _currentLayout.Rooms)
-        {
-            if ((room.Doors & DoorDirection.North) != 0)
-                PlaceDoor(room, DoorDirection.North);
-
-            if ((room.Doors & DoorDirection.East) != 0)
-                PlaceDoor(room, DoorDirection.East);
-        }
+            foreach (var dir in AllDirections)
+                if ((room.Doors & dir) != 0)
+                    PlaceDoor(room, dir);
     }
 
     private void PlaceDoor(Room room, DoorDirection dir)
     {
-        Vector3 worldPos;
+        Vector3 worldPos = GetDoorWorldPosition(room, dir);
         Quaternion rotation;
         GameObject prefabToUse;
 
-        if (dir == DoorDirection.North)
+        switch (dir)
         {
-            worldPos = new Vector3(room.GridPos.x + room.Width / 2f, room.GridPos.y + room.Height, 0f);
-            rotation = Quaternion.identity; // horizontal wall — horizontalDoorPrefab is already drawn for this
-            prefabToUse = horizontalDoorPrefab;
-        }
-        else // East
-        {
-            worldPos = new Vector3(room.GridPos.x + room.Width, room.GridPos.y + room.Height / 2f, 0f);
-
-            if (verticalDoorPrefab != null)
-            {
-                // Dedicated vertical art — no rotation needed, it's drawn for this orientation.
-                rotation = Quaternion.identity;
-                prefabToUse = verticalDoorPrefab;
-            }
-            else
-            {
-                // Fallback: rotate the horizontal prefab 90° (only looks right for symmetric art).
-                rotation = Quaternion.Euler(0f, 0f, 90f);
+            case DoorDirection.North:
+                rotation = Quaternion.identity; // horizontalDoorPrefab is already drawn for this
                 prefabToUse = horizontalDoorPrefab;
-            }
+                break;
+
+            case DoorDirection.South:
+                // Same horizontal art as North, flipped 180° to face outward on this side.
+                // Tweak this rotation (or swap in a separate prefab) if your door sprite isn't
+                // vertically symmetric and ends up looking wrong.
+                rotation = Quaternion.Euler(0f, 0f, 180f);
+                prefabToUse = horizontalDoorPrefab;
+                break;
+
+            case DoorDirection.East:
+                if (verticalDoorPrefab != null)
+                {
+                    rotation = Quaternion.identity; // dedicated vertical art — already correct
+                    prefabToUse = verticalDoorPrefab;
+                }
+                else
+                {
+                    // Fallback: rotate the horizontal prefab 90° (only looks right for symmetric art).
+                    rotation = Quaternion.Euler(0f, 0f, 90f);
+                    prefabToUse = horizontalDoorPrefab;
+                }
+                break;
+
+            case DoorDirection.West:
+                if (verticalDoorPrefab != null)
+                {
+                    // Same vertical art as East, flipped 180° to face outward on this side.
+                    rotation = Quaternion.Euler(0f, 0f, 180f);
+                    prefabToUse = verticalDoorPrefab;
+                }
+                else
+                {
+                    rotation = Quaternion.Euler(0f, 0f, -90f);
+                    prefabToUse = horizontalDoorPrefab;
+                }
+                break;
+
+            default:
+                return;
         }
+
+        if (prefabToUse == null) return;
 
         GameObject instance = Instantiate(prefabToUse, worldPos, rotation, _doorContainer.transform);
         instance.name = $"Door_{dir}_{room.GridPos.x}_{room.GridPos.y}";
@@ -691,8 +700,52 @@ public class DungeonManager : MonoBehaviour
             door.RegisterRoom(ownerController);
 
         if (_roomControllers.TryGetValue(neighborGridPos, out var neighborController))
+        {
             door.RegisterRoom(neighborController);
+
+            // Walking through this door should land the player just inside the NEIGHBOR room,
+            // near ITS door on the opposite side — not in the gap between the two rooms.
+            Vector3 entryPoint = GetDoorEntryPoint(neighborController.RoomData, Opposite(dir));
+            door.SetTeleportDestination(entryPoint);
+        }
+        else
+        {
+            Debug.LogWarning($"[DungeonManager] Door_{dir}_{room.GridPos.x}_{room.GridPos.y} couldn't find its neighbor room — disabling its entry trigger.");
+            door.DisableEntryTrigger();
+        }
     }
+
+    /// <summary>World-space spawn position for a room's door on side dir — the same wall-row
+    /// alignment used for the existing North/East placement, mirrored symmetrically for South/West.</summary>
+    private static Vector3 GetDoorWorldPosition(Room room, DoorDirection dir) => dir switch
+    {
+        DoorDirection.North => new Vector3(room.GridPos.x + room.Width / 2f, room.GridPos.y + room.Height, 0f),
+        DoorDirection.South => new Vector3(room.GridPos.x + room.Width / 2f, room.GridPos.y, 0f),
+        DoorDirection.East  => new Vector3(room.GridPos.x + room.Width, room.GridPos.y + room.Height / 2f, 0f),
+        DoorDirection.West  => new Vector3(room.GridPos.x, room.GridPos.y + room.Height / 2f, 0f),
+        _ => new Vector3(room.GridPos.x + room.Width / 2f, room.GridPos.y + room.Height / 2f, 0f)
+    };
+
+    /// <summary>World-space position of the first Floor tile inside a room, right next to its
+    /// own door on side sideWithDoor — this is where the player lands after using the door on
+    /// the OTHER side of that connection.</summary>
+    private static Vector3 GetDoorEntryPoint(Room room, DoorDirection sideWithDoor) => sideWithDoor switch
+    {
+        DoorDirection.North => new Vector3(room.GridPos.x + room.Width / 2f, room.GridPos.y + room.Height - 0.5f, 0f),
+        DoorDirection.South => new Vector3(room.GridPos.x + room.Width / 2f, room.GridPos.y + 0.5f, 0f),
+        DoorDirection.East  => new Vector3(room.GridPos.x + room.Width - 0.5f, room.GridPos.y + room.Height / 2f, 0f),
+        DoorDirection.West  => new Vector3(room.GridPos.x + 0.5f, room.GridPos.y + room.Height / 2f, 0f),
+        _ => new Vector3(room.GridPos.x + room.Width / 2f, room.GridPos.y + room.Height / 2f, 0f)
+    };
+
+    private static DoorDirection Opposite(DoorDirection dir) => dir switch
+    {
+        DoorDirection.North => DoorDirection.South,
+        DoorDirection.South => DoorDirection.North,
+        DoorDirection.East  => DoorDirection.West,
+        DoorDirection.West  => DoorDirection.East,
+        _ => DoorDirection.None
+    };
 
     private void CalculatePlayerSpawnPosition()
     {
@@ -745,12 +798,14 @@ public class DungeonManager : MonoBehaviour
         _ => Vector2Int.zero
     };
 
+    // Includes DungeonGridConstants.RoomGap: rooms are separated by a gap now, so the neighbor
+    // in a given direction sits (width/height + gap) tiles away, not just (width/height) away.
     private static Vector2Int DirectionOffset(DoorDirection dir, int width, int height) => dir switch
     {
-        DoorDirection.North => new Vector2Int(0, height),
-        DoorDirection.South => new Vector2Int(0, -height),
-        DoorDirection.East  => new Vector2Int(width, 0),
-        DoorDirection.West  => new Vector2Int(-width, 0),
+        DoorDirection.North => new Vector2Int(0, height + DungeonGridConstants.RoomGap),
+        DoorDirection.South => new Vector2Int(0, -(height + DungeonGridConstants.RoomGap)),
+        DoorDirection.East  => new Vector2Int(width + DungeonGridConstants.RoomGap, 0),
+        DoorDirection.West  => new Vector2Int(-(width + DungeonGridConstants.RoomGap), 0),
         _ => Vector2Int.zero
     };
 
@@ -782,6 +837,11 @@ public class DungeonManager : MonoBehaviour
         return null;
     }
 
+    // NOTE: this bounding-box "touching" heuristic (expanding each room's rect by only 1 tile)
+    // assumed rooms sat flush against each other. With DungeonGridConstants.RoomGap now
+    // separating rooms, this will no longer detect true neighbors unless RoomGap <= 1. Not
+    // touched here since nothing in the current scripts calls it, but flag it if you use it
+    // elsewhere (e.g. a minimap).
     public Room[] GetConnectedRooms(Room room)
     {
         var connected = new List<Room>();

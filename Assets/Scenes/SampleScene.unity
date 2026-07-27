@@ -961,8 +961,8 @@ MonoBehaviour:
   wallDecorationTilemap: {fileID: 1410210496}
   wallDecorationTileVariants: []
   wallDecorationChance: 0.08
-  horizontalDoorPrefab: {fileID: 0}
-  verticalDoorPrefab: {fileID: 0}
+  horizontalDoorPrefab: {fileID: 3180621973278078736, guid: b544fa2116f71e6fab500253fb4fbed9, type: 3}
+  verticalDoorPrefab: {fileID: 7481686969901270179, guid: 257deb42bdf0a2095b4fd3b597292be9, type: 3}
   spawnMode: 1
   spawnOffset: {x: 0, y: 0, z: 0}
 --- !u!4 &967368263

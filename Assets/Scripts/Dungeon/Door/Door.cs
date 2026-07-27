@@ -1,9 +1,16 @@
 using UnityEngine;
 
 /// <summary>
-/// A door sits on the shared edge between exactly two rooms (RegisterRoom is called twice,
-/// once per side). It stays closed while either connected room isn't cleared, and opens the
-/// moment both are cleared — a room with no enemies counts as cleared immediately.
+/// A door sits on a room's own exterior edge. It stays closed while either connected room isn't
+/// cleared, and opens the moment both are cleared — a room with no enemies counts as cleared
+/// immediately.
+///
+/// Since rooms are separated by a gap (see DungeonGridConstants.RoomGap), each connection
+/// between two rooms is now made of TWO independent Door instances — one per room, each on its
+/// own edge — instead of one shared tile. Walking through an open door doesn't physically cross
+/// the gap: a child EntryTrigger (see DoorEntryTrigger.cs), positioned half a tile past this
+/// door's own tile, teleports the player straight to TeleportDestination, which DungeonManager
+/// sets to a safe point just inside the connected room.
 ///
 /// Animation: if an Animator is assigned, Open()/Close() fire OpenTrigger/CloseTrigger and the
 /// collider is toggled via Animation Events (OnOpenAnimationComplete / OnCloseAnimationComplete)
@@ -24,11 +31,18 @@ public class Door : MonoBehaviour
     [SerializeField] private string _openTriggerName = "OpenTrigger";
     [SerializeField] private string _closeTriggerName = "CloseTrigger";
 
+    [Header("Teleport")]
+    [Tooltip("Child object (with an isTrigger Collider2D + DoorEntryTrigger) positioned half a tile past this door's own tile, toward the gap. Detects the player crossing the threshold while the door is open. Leave empty if this door shouldn't teleport (e.g. a decorative door).")]
+    [SerializeField] private Transform _entryTrigger;
+
     private Collider2D _collider;
     private RoomController _roomA;
     private RoomController _roomB;
 
     public bool IsOpen { get; private set; }
+
+    /// <summary>World position the player is sent to when crossing this door's EntryTrigger while open. Set by DungeonManager.PlaceDoor() right after this door is instantiated.</summary>
+    public Vector3 TeleportDestination { get; private set; }
 
     private void Awake()
     {
@@ -48,6 +62,20 @@ public class Door : MonoBehaviour
 
         room.OnCleared += Reevaluate;
         Reevaluate();
+    }
+
+    /// <summary>Sets where the player lands after crossing this door's threshold while it's open.</summary>
+    public void SetTeleportDestination(Vector3 destination)
+    {
+        TeleportDestination = destination;
+    }
+
+    /// <summary>Disables this door's EntryTrigger — used when DungeonManager couldn't resolve a
+    /// connected neighbor room, so an accidental crossing never teleports the player somewhere invalid.</summary>
+    public void DisableEntryTrigger()
+    {
+        if (_entryTrigger != null)
+            _entryTrigger.gameObject.SetActive(false);
     }
 
     private void Reevaluate()

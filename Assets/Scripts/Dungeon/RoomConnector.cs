@@ -58,12 +58,15 @@ public static class RoomConnector
         return allConnected;
     }
 
+    // Incluye DungeonGridConstants.RoomGap: como las salas ya no est�n pegadas (ver
+    // FloorLayout.BuildRooms), la sala vecina en cada direcci�n est� a (ancho/alto + gap) tiles
+    // de distancia, no solo a (ancho/alto).
     private static Vector2Int DirectionOffset(DoorDirection dir, int width, int height) => dir switch
     {
-        DoorDirection.North => new Vector2Int(0, height),
-        DoorDirection.South => new Vector2Int(0, -height),
-        DoorDirection.East  => new Vector2Int(width, 0),
-        DoorDirection.West  => new Vector2Int(-width, 0),
+        DoorDirection.North => new Vector2Int(0, height + DungeonGridConstants.RoomGap),
+        DoorDirection.South => new Vector2Int(0, -(height + DungeonGridConstants.RoomGap)),
+        DoorDirection.East  => new Vector2Int(width + DungeonGridConstants.RoomGap, 0),
+        DoorDirection.West  => new Vector2Int(-(width + DungeonGridConstants.RoomGap), 0),
         _ => Vector2Int.zero
     };
 
