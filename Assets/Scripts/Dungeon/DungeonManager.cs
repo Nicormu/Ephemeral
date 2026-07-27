@@ -45,8 +45,11 @@ public class DungeonManager : MonoBehaviour
     [Range(0f, 1f)] public float wallDecorationChance = 0.08f;
 
     [Header("Doors")]
-    [Tooltip("Prefab with a Door component. Instantiated once per shared edge between two adjacent rooms.")]
-    public GameObject doorPrefab;
+    [Tooltip("Prefab with a Door component, drawn for a HORIZONTAL wall segment (room's North/South edge — door spans left-to-right). Instantiated once per shared horizontal edge between two adjacent rooms.")]
+    public GameObject horizontalDoorPrefab;
+
+    [Tooltip("Prefab with a Door component, drawn for a VERTICAL wall segment (room's East/West edge — door spans top-to-bottom). Instantiated once per shared vertical edge between two adjacent rooms. Leave empty to fall back to doorPrefab rotated 90°.")]
+    public GameObject verticalDoorPrefab;
 
     [Header("Player Spawn")]
     public PlayerSpawnMode spawnMode = PlayerSpawnMode.RoomCenter;
@@ -362,13 +365,23 @@ public class DungeonManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Walls are derived per-room, never hand-placed: whatever cell borders an occupied cell but
-    /// isn't itself occupied becomes a wall tile. Which Rule Tile gets used depends on which side
-    /// of the room the wall is on — North uses TopWallTile, South uses BottomWallTile, and East/West
-    /// both use SideWallTile (East is painted as a horizontal mirror of the same asset, so only one
-    /// side tileset needs to be authored). On a room's north-facing wall specifically, an extra
-    /// WallTopTile is stacked one cell higher to fake the taller "top wall" silhouette (32x32 pieces
-    /// stacked, not a single tall sprite).
+    /// Walls are derived per-room, never hand-placed: for each room, whatever cell borders one
+    /// of THAT ROOM'S OWN occupied cells but isn't itself one of that room's own cells becomes a
+    /// wall — UNLESS it's exactly that room's door position for that side, which is left open.
+    ///
+    /// Deliberately checked against the room's own cell set rather than the dungeon-wide
+    /// _cellLookup: two rooms can sit directly adjacent on the grid without being connected by a
+    /// door, and _cellLookup would report that boundary as "occupied" (by the neighboring room),
+    /// silently skipping the wall along the whole shared edge instead of just the door's single
+    /// tile. Using each room's own cells avoids that and paints a full wall except exactly where
+    /// a door belongs.
+    ///
+    /// Which Rule Tile gets used depends on which side of the room the wall is on — North uses
+    /// TopWallTile, South uses BottomWallTile, and East/West both use SideWallTile (East is
+    /// painted as a horizontal mirror of the same asset, so only one side tileset needs to be
+    /// authored). On a room's north-facing wall specifically, an extra WallTopTile is stacked one
+    /// cell higher to fake the taller "top wall" silhouette (32x32 pieces stacked, not a single
+    /// tall sprite).
     /// Also records every painted wall cell into _wallPositions, so SpawnWallDecorations() knows
     /// exactly which cells are eligible for a wall decoration.
     /// </summary>
@@ -376,12 +389,32 @@ public class DungeonManager : MonoBehaviour
     {
         _wallPositions = new HashSet<Vector2Int>();
 
-        if (wallTilemap == null || _cellLookup == null || _currentLayout.Rooms == null) return;
+        if (wallTilemap == null || _currentLayout.Rooms == null) return;
 
         var paintedTop = new HashSet<Vector2Int>();
 
+        // East wall cells need a horizontal flip (see below), but a Rule Tile's neighbor-refresh
+        // resets any per-cell transform we set mid-loop — painting a NEIGHBORING wall cell later
+        // triggers Unity to re-run GetTileData() on already-painted Rule Tile cells nearby, which
+        // recomputes the transform from scratch (identity) and silently discards our flip. So we
+        // only record which cells need flipping here, and apply SetTransformMatrix in one final
+        // pass at the very end of this method, once no more SetTile calls remain to re-trigger a
+        // refresh.
+        var eastFlipPositions = new HashSet<Vector2Int>();
+
         foreach (var room in _currentLayout.Rooms)
         {
+            // Built from THIS room's own cells only — deliberately NOT the dungeon-wide
+            // _cellLookup. Two rooms can sit directly adjacent on the grid without being
+            // connected by a door, and _cellLookup would report that shared boundary as
+            // "occupied" (by the neighboring room's floor), silently skipping the wall along
+            // the whole shared edge instead of just the door's single tile. Using each room's
+            // own cells means a wall is painted along the full edge except exactly where this
+            // room's own door belongs (see IsRoomDoorCell below).
+            var roomCells = new HashSet<Vector2Int>();
+            foreach (var cell in room.Cells)
+                roomCells.Add(cell.CellPos);
+
             foreach (var cell in room.Cells)
             {
                 Vector2Int cellPos = cell.CellPos;
@@ -389,7 +422,13 @@ public class DungeonManager : MonoBehaviour
                 foreach (var dir in AllDirections)
                 {
                     Vector2Int wallPos = cellPos + UnitOffset(dir);
-                    if (_cellLookup.ContainsKey(wallPos)) continue; // occupied — this isn't a wall position
+
+                    // Interior to this same room — not a wall position.
+                    if (roomCells.Contains(wallPos)) continue;
+
+                    // Leave exactly this room's door gap open on this side, regardless of
+                    // whether a neighboring room's floor happens to sit beyond it.
+                    if (IsRoomDoorCell(room, wallPos, dir)) continue;
 
                     TileBase wallTile = dir switch
                     {
@@ -406,8 +445,10 @@ public class DungeonManager : MonoBehaviour
                         var tilePos = new Vector3Int(wallPos.x, wallPos.y, 0);
                         wallTilemap.SetTile(tilePos, wallTile);
 
-                        // East is the same art as West, mirrored horizontally at paint time.
-                        wallTilemap.SetTransformMatrix(tilePos, dir == DoorDirection.East ? FlipXMatrix : Matrix4x4.identity);
+                        // East is the same art as West, mirrored horizontally — but don't set the
+                        // transform here, see eastFlipPositions comment above.
+                        if (dir == DoorDirection.East)
+                            eastFlipPositions.Add(wallPos);
                     }
 
                     if (dir == DoorDirection.North && room.WallTopTile != null)
@@ -418,7 +459,96 @@ public class DungeonManager : MonoBehaviour
                     }
                 }
             }
+
+            // North wall corners: one cell BEYOND the room's floor width on each side, so the
+            // North wall row ends up Width + 2 cells wide (corner + Width normal cells + corner)
+            // instead of the corners eating into the Width cells directly above the floor.
+            // These two cells are never produced by the per-floor-cell loop above (they aren't
+            // directly north of any floor cell — they're diagonally outside the room's rectangle),
+            // so they're painted explicitly here. The corner sprite itself is still resolved by
+            // TopWallTile's own Rule Tile ("no neighbor to the west/east" rule) — same asset, same
+            // rules, just now applied to the two outermost cells of a 15-wide row instead of a
+            // 13-wide one.
+            PaintNorthWallCorners(room);
+            PaintSouthWallCorners(room);
         }
+
+        // Now that every wall cell across every room has been painted — and nothing else will
+        // call SetTile on wallTilemap after this — it's safe to flip the East wall cells without
+        // a later Rule Tile refresh silently resetting them back to identity.
+        foreach (var pos in eastFlipPositions)
+        {
+            Vector3Int tilePos = new Vector3Int(pos.x, pos.y, 0);
+            wallTilemap.SetTileFlags(tilePos, TileFlags.None);
+            wallTilemap.SetTransformMatrix(tilePos, FlipXMatrix);
+        }
+    }
+
+    /// <summary>
+    /// True if wallPos is exactly this room's door tile on side dir (a single tile, centered on
+    /// that side, matching where SpawnDoors/PlaceDoor puts the actual Door GameObject). Doesn't
+    /// check whether a neighboring room actually exists there — ComputeDoors() (FloorLayout) only
+    /// ever sets a door flag when there IS a connected neighbor, so this is safe on its own.
+    /// </summary>
+    private static bool IsRoomDoorCell(Room room, Vector2Int wallPos, DoorDirection dir)
+    {
+        if ((room.Doors & dir) == 0) return false;
+
+        Vector2Int doorCell = dir switch
+        {
+            DoorDirection.North => new Vector2Int(room.GridPos.x + room.Width / 2, room.GridPos.y + room.Height),
+            DoorDirection.South => new Vector2Int(room.GridPos.x + room.Width / 2, room.GridPos.y - 1),
+            DoorDirection.East  => new Vector2Int(room.GridPos.x + room.Width, room.GridPos.y + room.Height / 2),
+            DoorDirection.West  => new Vector2Int(room.GridPos.x - 1, room.GridPos.y + room.Height / 2),
+            _ => wallPos + Vector2Int.one // never matches
+        };
+
+        return wallPos == doorCell;
+    }
+
+    /// <summary>
+    /// Paints the two North-wall corner cells for a room, one cell outside the floor rectangle
+    /// on each side (see BuildWalls). Skipped if that exact cell was already painted — e.g. by a
+    /// horizontally-adjacent room's own wall — so two neighboring rooms never overwrite each
+    /// other's tile at the shared boundary. Once side walls exist, that shared cell is meant to
+    /// resolve to the same corner sprite regardless of which room "claims" it first, since both
+    /// walls use the same TopWallTile asset with the same rules.
+    /// </summary>
+    private void PaintNorthWallCorners(Room room)
+    {
+        if (room.TopWallTile == null) return;
+
+        int wallY = room.GridPos.y + room.Height;
+        Vector2Int leftCorner  = new Vector2Int(room.GridPos.x - 1, wallY);
+        Vector2Int rightCorner = new Vector2Int(room.GridPos.x + room.Width, wallY);
+
+        PaintWallCellIfEmpty(leftCorner, room.TopWallTile);
+        PaintWallCellIfEmpty(rightCorner, room.TopWallTile);
+    }
+
+    /// <summary>
+    /// Paints the two South-wall corner cells for a room, one cell outside the floor rectangle
+    /// on each side. Uses BottomWallTile. Skipped if that exact cell was already painted.
+    /// </summary>
+    private void PaintSouthWallCorners(Room room)
+    {
+        if (room.BottomWallTile == null) return;
+
+        // South walls are placed one tile below the room's bottom edge (y - 1)
+        int wallY = room.GridPos.y - 1; 
+        
+        Vector2Int leftCorner  = new Vector2Int(room.GridPos.x - 1, wallY);
+        Vector2Int rightCorner = new Vector2Int(room.GridPos.x + room.Width, wallY);
+
+        PaintWallCellIfEmpty(leftCorner, room.BottomWallTile);
+        PaintWallCellIfEmpty(rightCorner, room.BottomWallTile);
+    }
+
+    private void PaintWallCellIfEmpty(Vector2Int pos, TileBase tile)
+    {
+        if (!_wallPositions.Add(pos)) return; // already painted — leave whatever's there
+
+        wallTilemap.SetTile(new Vector3Int(pos.x, pos.y, 0), tile);
     }
 
     /// <summary>
@@ -503,7 +633,7 @@ public class DungeonManager : MonoBehaviour
     /// </summary>
     private void SpawnDoors()
     {
-        if (doorPrefab == null || _currentLayout.Rooms == null) return;
+        if (horizontalDoorPrefab == null || _currentLayout.Rooms == null) return;
 
         foreach (var room in _currentLayout.Rooms)
         {
@@ -519,19 +649,33 @@ public class DungeonManager : MonoBehaviour
     {
         Vector3 worldPos;
         Quaternion rotation;
+        GameObject prefabToUse;
 
         if (dir == DoorDirection.North)
         {
             worldPos = new Vector3(room.GridPos.x + room.Width / 2f, room.GridPos.y + room.Height, 0f);
-            rotation = Quaternion.identity; // door spans horizontally
+            rotation = Quaternion.identity; // horizontal wall — horizontalDoorPrefab is already drawn for this
+            prefabToUse = horizontalDoorPrefab;
         }
         else // East
         {
             worldPos = new Vector3(room.GridPos.x + room.Width, room.GridPos.y + room.Height / 2f, 0f);
-            rotation = Quaternion.Euler(0f, 0f, 90f); // door spans vertically
+
+            if (verticalDoorPrefab != null)
+            {
+                // Dedicated vertical art — no rotation needed, it's drawn for this orientation.
+                rotation = Quaternion.identity;
+                prefabToUse = verticalDoorPrefab;
+            }
+            else
+            {
+                // Fallback: rotate the horizontal prefab 90° (only looks right for symmetric art).
+                rotation = Quaternion.Euler(0f, 0f, 90f);
+                prefabToUse = horizontalDoorPrefab;
+            }
         }
 
-        GameObject instance = Instantiate(doorPrefab, worldPos, rotation, _doorContainer.transform);
+        GameObject instance = Instantiate(prefabToUse, worldPos, rotation, _doorContainer.transform);
         instance.name = $"Door_{dir}_{room.GridPos.x}_{room.GridPos.y}";
 
         var door = instance.GetComponent<Door>();

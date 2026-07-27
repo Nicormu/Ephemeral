@@ -3,8 +3,15 @@ using UnityEngine;
 
 /// <summary>
 /// Frames the camera to exactly match the bounds of the room the player is currently in —
-/// the same rectangle DungeonManager.OnDrawGizmos draws — and pans/zooms to the new room's
+/// the same rectangle DungeonManager.OnDrawGizmos draws — and switches to the new room's
 /// bounds whenever the player crosses into a different room. Requires an Orthographic camera.
+///
+/// Two modes, controlled by _instantSnap:
+///   - Instant Snap ON  (Isaac-style): the camera hard-cuts the instant the player's grid cell
+///     belongs to a different room. No lerp, no lag — matches the classic "locked screen" feel.
+///     Player movement is untouched and uninterrupted; only the camera cuts.
+///   - Instant Snap OFF: the camera smoothly pans/zooms over _transitionDuration seconds
+///     instead (previous behavior), useful if you ever want a softer transition style.
 /// </summary>
 [RequireComponent(typeof(Camera))]
 public class RoomCamera : MonoBehaviour
@@ -13,8 +20,11 @@ public class RoomCamera : MonoBehaviour
     [Tooltip("Player transform to track. Leave empty to auto-find PlayerMovement.Instance.")]
     [SerializeField] private Transform _target;
 
-    [Header("Transition")]
-    [Tooltip("Seconds to pan/zoom between rooms. Set to 0 for an instant snap.")]
+    [Header("Transition Style")]
+    [Tooltip("Isaac-style hard cut: the camera snaps instantly the moment the player's cell belongs to a new room. Turn off for a smooth pan/zoom instead.")]
+    [SerializeField] private bool _instantSnap = true;
+
+    [Tooltip("Seconds to pan/zoom between rooms. Only used when Instant Snap is OFF.")]
     [SerializeField] private float _transitionDuration = 0.35f;
 
     [Tooltip("Extra world-space padding added around the room bounds so walls aren't flush against the screen edge.")]
@@ -58,7 +68,7 @@ public class RoomCamera : MonoBehaviour
         if (_currentRoomGridPos == null || room.Value.GridPos != _currentRoomGridPos.Value)
         {
             _currentRoomGridPos = room.Value.GridPos;
-            MoveToRoom(room.Value, instant: _transitionDuration <= 0f);
+            MoveToRoom(room.Value, instant: _instantSnap || _transitionDuration <= 0f);
         }
     }
 

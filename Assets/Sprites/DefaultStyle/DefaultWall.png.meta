@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 9e8cb95531e840435a3ac6122684ddeb
+guid: e5275cd377e92c6f1a7c04ca27c2dbba
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1971949515151955649
-    second: UpperWallTileTry_0
+      213: 1495198287196595740
+    second: DefaultWall_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -37,7 +37,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 1
+    filterMode: 0
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -113,7 +113,95 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: UpperWallTileTry_0
+      name: UpperLeftCorner
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 128
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c1620299be200c410800000000000000
+      internalID: 1495198287196595740
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UpperWall
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 128
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 011bcbb21f293d0a083d2424b5c9266c
+      internalID: -1216915182
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UpperRightCorner
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 128
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6b188980e4ed0e43181de6063191c32b
+      internalID: -1053955090
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SideWall
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 64
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3dba56e7ff8154c4fae25ba5b6053180
+      internalID: -2091902160
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LowerLeftCorner
       rect:
         serializedVersion: 2
         x: 0
@@ -126,16 +214,16 @@ TextureImporter:
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 1c6d2add2a5cd5b10800000000000000
-      internalID: 1971949515151955649
+      spriteID: 646087837c16d7562b321500596683f8
+      internalID: 1406439118
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: UpperWallTileTry_1
+      name: LowerWall
       rect:
         serializedVersion: 2
         x: 64
@@ -150,14 +238,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: d8795059816d40cadb075227dd767e6d
-      internalID: -1498552035
+      spriteID: 20b0a877d6f2779f28dc0b07f4100fc3
+      internalID: 1252587706
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: UpperWallTileTry_2
+      name: LowerRightCorner
       rect:
         serializedVersion: 2
         x: 128
@@ -172,8 +260,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 37b37ef618499d5ef90b02cb9c1f4115
-      internalID: -766926588
+      spriteID: 8cfc50b1287894b54b9876daeaf11211
+      internalID: -968037968
       vertices: []
       indices: 
       edges: []
@@ -182,7 +270,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 3d4dd048ff1f89ffba17140029398a9b
+    spriteID: 9ee25acbe4e9e05cda902a987e48abae
     internalID: 0
     vertices: []
     indices: 
@@ -191,14 +279,16 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries:
-      - key: SpriteEditor.SliceOnImport
-        value: False
       - key: SpriteEditor.SliceSettings
         value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":1,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      UpperWallTileTry_0: 1971949515151955649
-      UpperWallTileTry_1: -1498552035
-      UpperWallTileTry_2: -766926588
+      LowerLeftCorner: 1406439118
+      LowerRightCorner: -968037968
+      LowerWall: 1252587706
+      SideWall: -2091902160
+      UpperLeftCorner: 1495198287196595740
+      UpperRightCorner: -1053955090
+      UpperWall: -1216915182
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
