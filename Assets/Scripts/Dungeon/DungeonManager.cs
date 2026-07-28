@@ -658,8 +658,8 @@ public class DungeonManager : MonoBehaviour
                 }
                 else
                 {
-                    // Fallback: rotate the horizontal prefab 90° (only looks right for symmetric art).
-                    rotation = Quaternion.Euler(0f, 0f, 90f);
+                    // Fallback: rotate the horizontal prefab 270° (only looks right for symmetric art).
+                    rotation = Quaternion.Euler(0f, 0f, -90f);
                     prefabToUse = horizontalDoorPrefab;
                 }
                 break;
@@ -673,7 +673,7 @@ public class DungeonManager : MonoBehaviour
                 }
                 else
                 {
-                    rotation = Quaternion.Euler(0f, 0f, -90f);
+                    rotation = Quaternion.Euler(0f, 0f, 90f);
                     prefabToUse = horizontalDoorPrefab;
                 }
                 break;
