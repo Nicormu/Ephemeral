@@ -2,10 +2,10 @@ using UnityEngine;
 
 /// <summary>
 /// Lives on a child GameObject of a Door, positioned half a tile past the door's own tile
-/// (toward the gap between rooms). While the parent Door is open, entering this trigger
-/// teleports the player to the door's TeleportDestination (a safe point just inside the
-/// connected room) — this is what makes the room-separation architecture feel like walking
-/// through a doorway instead of falling into the gap between rooms.
+/// (toward the gap between rooms). While the parent Door is open, entering this trigger starts
+/// the room transition — RoomCamera.BeginRoomTransition glides the player to the door's
+/// TeleportDestination (a safe point just inside the connected room) while panning/zooming the
+/// camera to match, producing an Isaac-style push/reveal instead of an instant cut.
 ///
 /// Requires its own Collider2D with Is Trigger enabled (this script forces that on Awake, but
 /// set it in the Inspector too so it's correct in Scene view before Play).
@@ -35,6 +35,12 @@ public class DoorEntryTrigger : MonoBehaviour
         var movement = other.GetComponent<PlayerMovement>();
         if (movement == null) return;
 
-        movement.TeleportTo(_parentDoor.TeleportDestination);
+        // Isaac-style push transition: camera pans/zooms to the next room while the player
+        // glides across the gap, instead of both cutting instantly. Falls back to an instant
+        // teleport if there's no RoomCamera in the scene (shouldn't normally happen).
+        if (RoomCamera.Instance != null)
+            RoomCamera.Instance.BeginRoomTransition(movement, _parentDoor.TeleportDestination);
+        else
+            movement.TeleportTo(_parentDoor.TeleportDestination);
     }
 }

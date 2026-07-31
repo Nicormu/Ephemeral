@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &3180621973278078736
+--- !u!1 &221114912085609554
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,42 +8,42 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 325221463766940704}
-  - component: {fileID: 1121044663615837432}
-  - component: {fileID: 571506578190140117}
-  - component: {fileID: 766934860817938953}
-  - component: {fileID: 4377968219141591937}
+  - component: {fileID: 1856007957094032345}
+  - component: {fileID: 5299394138414721691}
+  - component: {fileID: 3405532787718136220}
+  - component: {fileID: 7110894906947976194}
+  - component: {fileID: 1958565210011173910}
   m_Layer: 0
-  m_Name: HorizontalDoor
+  m_Name: LowerDoor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &325221463766940704
+--- !u!4 &1856007957094032345
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3180621973278078736}
+  m_GameObject: {fileID: 221114912085609554}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -11.99469, y: -12.53481, z: 0}
+  m_LocalPosition: {x: 14.24417, y: 2.97496, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 5856890408214945523}
+  - {fileID: 429757491118734773}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &1121044663615837432
+--- !u!212 &5299394138414721691
 SpriteRenderer:
   serializedVersion: 2
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3180621973278078736}
+  m_GameObject: {fileID: 221114912085609554}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -85,7 +85,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 2069499187, guid: d9bb4b56391a3a1b4923f74d43d533cb, type: 3}
+  m_Sprite: {fileID: -1258754289, guid: d9bb4b56391a3a1b4923f74d43d533cb, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -95,13 +95,13 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!61 &571506578190140117
+--- !u!61 &3405532787718136220
 BoxCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3180621973278078736}
+  m_GameObject: {fileID: 221114912085609554}
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
@@ -129,7 +129,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.00040197372, y: -0.3712983}
+  m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -139,19 +139,19 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1.0128164, y: 0.27379513}
+  m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
---- !u!95 &766934860817938953
+--- !u!95 &7110894906947976194
 Animator:
   serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3180621973278078736}
+  m_GameObject: {fileID: 221114912085609554}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: da222d23508c841458660ff86856bddd, type: 2}
+  m_Controller: {fileID: 9100000, guid: 76287d116245b702b843a6052dcf78e5, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -163,26 +163,26 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &4377968219141591937
+--- !u!114 &1958565210011173910
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3180621973278078736}
+  m_GameObject: {fileID: 221114912085609554}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 24a25c76047152343b0775574960b0d9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Door
-  _spriteRenderer: {fileID: 1121044663615837432}
-  _closedSprite: {fileID: 2069499187, guid: d9bb4b56391a3a1b4923f74d43d533cb, type: 3}
-  _openSprite: {fileID: -1974041198, guid: d9bb4b56391a3a1b4923f74d43d533cb, type: 3}
-  _animator: {fileID: 766934860817938953}
+  _spriteRenderer: {fileID: 5299394138414721691}
+  _closedSprite: {fileID: -1258754289, guid: d9bb4b56391a3a1b4923f74d43d533cb, type: 3}
+  _openSprite: {fileID: -284328871, guid: d9bb4b56391a3a1b4923f74d43d533cb, type: 3}
+  _animator: {fileID: 7110894906947976194}
   _openTriggerName: OpenTrigger
   _closeTriggerName: CloseTrigger
-  _entryTrigger: {fileID: 5856890408214945523}
---- !u!1 &4561101598458187926
+  _entryTrigger: {fileID: 429757491118734773}
+--- !u!1 &7626254044880138289
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -190,9 +190,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 5856890408214945523}
-  - component: {fileID: 8493680312884909811}
-  - component: {fileID: 4072013798098637306}
+  - component: {fileID: 429757491118734773}
+  - component: {fileID: 220606474021064387}
+  - component: {fileID: 7212872733704540394}
   m_Layer: 0
   m_Name: EntryTrigger
   m_TagString: Untagged
@@ -200,28 +200,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &5856890408214945523
+--- !u!4 &429757491118734773
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4561101598458187926}
+  m_GameObject: {fileID: 7626254044880138289}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 325221463766940704}
+  m_Father: {fileID: 1856007957094032345}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!61 &8493680312884909811
+--- !u!61 &220606474021064387
 BoxCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4561101598458187926}
+  m_GameObject: {fileID: 7626254044880138289}
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
@@ -249,7 +249,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: -0.0011658669, y: 0.1563034}
+  m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0, y: 0}
@@ -259,18 +259,18 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.5571165, y: 0.16101456}
+  m_Size: {x: 1, y: 0.1}
   m_EdgeRadius: 0
---- !u!114 &4072013798098637306
+--- !u!114 &7212872733704540394
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4561101598458187926}
+  m_GameObject: {fileID: 7626254044880138289}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e16e6e417f6294969dc302ceeac4617, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoorEntryTrigger
-  _parentDoor: {fileID: 4377968219141591937}
+  _parentDoor: {fileID: 1958565210011173910}

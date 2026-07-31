@@ -24,6 +24,7 @@ public class PlayerMovement : MonoBehaviour
 
     // -- component refs --
     private Rigidbody2D _rb;
+    private Collider2D _collider;
 
     // -- state --
     private PlayerState _currentState;
@@ -51,6 +52,7 @@ public class PlayerMovement : MonoBehaviour
 
         Instance = this;
         _rb = GetComponent<Rigidbody2D>();
+        _collider = GetComponent<Collider2D>();
         _currentState = PlayerState.Idle;
     }
 
@@ -174,7 +176,7 @@ public class PlayerMovement : MonoBehaviour
 
     #endregion
 
-    #region Teleport
+    #region Teleport / External control
 
     /// <summary>
     /// Instantly moves the player to a new position and clears any residual velocity/roll state.
@@ -189,6 +191,30 @@ public class PlayerMovement : MonoBehaviour
             _rb.linearVelocity = Vector2.zero;
 
         SetState(PlayerState.Idle);
+    }
+
+    /// <summary>
+    /// Enables/disables player input control. Used by external systems that need to drive the
+    /// player's transform directly for a moment — e.g. RoomCamera's door-crossing transition,
+    /// which glides the player across the gap between rooms while the camera pans. Disabling
+    /// stops both FixedUpdate movement and Update's facing-direction tracking (component is
+    /// simply turned off), and zeroes residual velocity so the player doesn't drift once control
+    /// is handed back.
+    ///
+    /// Also suspends the player's own Collider2D while disabled: during an externally-driven
+    /// glide the destination is already a known-safe position, so physics shouldn't be able to
+    /// snag the player on a closed/misaligned door collider (or anything else) along the way.
+    /// Re-enabled the instant control is handed back.
+    /// </summary>
+    public void SetControlEnabled(bool value)
+    {
+        enabled = value;
+
+        if (!value && _rb != null)
+            _rb.linearVelocity = Vector2.zero;
+
+        if (_collider != null)
+            _collider.enabled = value;
     }
 
     #endregion

@@ -94,12 +94,17 @@ public class Door : MonoBehaviour
 
         if (_animator != null && !instant)
         {
+            _animator.enabled = true; // Ensure Animator is running
             _animator.SetTrigger(_openTriggerName);
             // Collider is disabled by OnOpenAnimationComplete() (Animation Event), not here.
         }
         else
         {
             if (_collider != null) _collider.enabled = false;
+            
+            // Disable Animator so it doesn't overwrite our manual sprite change
+            if (_animator != null) _animator.enabled = false; 
+            
             if (_spriteRenderer != null && _openSprite != null) _spriteRenderer.sprite = _openSprite;
         }
     }
@@ -115,11 +120,18 @@ public class Door : MonoBehaviour
 
         if (_animator != null && !instant)
         {
+            _animator.enabled = true; // Ensure Animator is running
             _animator.SetTrigger(_closeTriggerName);
         }
-        else if (_spriteRenderer != null && _closedSprite != null)
+        else 
         {
-            _spriteRenderer.sprite = _closedSprite;
+            // Disable Animator so it doesn't overwrite our manual sprite change
+            if (_animator != null) _animator.enabled = false; 
+            
+            if (_spriteRenderer != null && _closedSprite != null)
+            {
+                _spriteRenderer.sprite = _closedSprite;
+            }
         }
     }
 

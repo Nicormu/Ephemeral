@@ -67,6 +67,21 @@ public static class FloorLayout
 
         PlaceTreasureRooms(cells, rng);
         ComputeDoors(cells);
+
+        // Safety net: every cell should already have at least one door purely from how it was
+        // added (GrowMainPath only ever adds a cell adjacent to an existing one; PlaceTreasureRooms
+        // does the same). This guard exists so a future change to the placement logic can never
+        // silently let a doorless — and therefore unreachable/uncrossable — room slip through;
+        // it just fails this attempt and Generate() retries with a fresh layout instead.
+        foreach (var kv in cells)
+        {
+            if (kv.Value.Doors == DoorDirection.None)
+            {
+                Debug.LogWarning("[FloorLayout] Generated a room with zero doors — discarding this attempt.");
+                return default;
+            }
+        }
+
         ClassifyRemainingTypes(cells, rng);
 
         List<Room> rooms = BuildRooms(cells, rng);

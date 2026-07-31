@@ -3,28 +3,40 @@ using UnityEngine;
 
 /// <summary>
 /// Frames the camera to exactly match the bounds of the room the player is currently in —
-/// the same rectangle DungeonManager.OnDrawGizmos draws — and switches to the new room's
-/// bounds whenever the player crosses into a different room. Requires an Orthographic camera.
+/// the same rectangle DungeonManager.OnDrawGizmos draws. Requires an Orthographic camera.
 ///
-/// Two modes, controlled by _instantSnap:
-///   - Instant Snap ON  (Isaac-style): the camera hard-cuts the instant the player's grid cell
-///     belongs to a different room. No lerp, no lag — matches the classic "locked screen" feel.
-///     Player movement is untouched and uninterrupted; only the camera cuts.
-///   - Instant Snap OFF: the camera smoothly pans/zooms over _transitionDuration seconds
-///     instead (previous behavior), useful if you ever want a softer transition style.
+/// Two ways a room change can happen:
+///
+///   1. DOOR CROSSING (the normal case): DoorEntryTrigger calls BeginRoomTransition() directly.
+///      This locks the player's movement and lerps BOTH the player's position (from the door
+///      threshold to the entry point in the next room) AND the camera's position/zoom (from the
+///      old room's framing to the new room's framing) over the same duration. Because both move
+///      together, the old room visually slides/pushes off screen while the new one is revealed —
+///      the classic Isaac-style transition — instead of an instant cut + instant teleport.
+///
+///   2. ANY OTHER TELEPORT (hazard recovery, initial spawn, etc.): the player's position changes
+///      some other way and LateUpdate() here just notices the room changed and reframes on its
+///      own, controlled by _instantSnap / _transitionDuration below. This path is intentionally
+///      simpler since those teleports aren't a "crossing" the player should see happen smoothly.
 /// </summary>
 [RequireComponent(typeof(Camera))]
 public class RoomCamera : MonoBehaviour
 {
+    public static RoomCamera Instance { get; private set; }
+
     [Header("Target")]
     [Tooltip("Player transform to track. Leave empty to auto-find PlayerMovement.Instance.")]
     [SerializeField] private Transform _target;
 
-    [Header("Transition Style")]
-    [Tooltip("Isaac-style hard cut: the camera snaps instantly the moment the player's cell belongs to a new room. Turn off for a smooth pan/zoom instead.")]
+    [Header("Door Transition (Isaac-style push)")]
+    [Tooltip("Seconds for the camera-pan + player-glide when crossing through a door.")]
+    [SerializeField] private float _doorTransitionDuration = 0.4f;
+
+    [Header("Fallback Transition Style (non-door teleports)")]
+    [Tooltip("Isaac-style hard cut: the camera snaps instantly the moment the player's cell belongs to a new room. Turn off for a smooth pan/zoom instead. Only applies when the room change wasn't triggered via BeginRoomTransition (e.g. hazard recovery, spawn).")]
     [SerializeField] private bool _instantSnap = true;
 
-    [Tooltip("Seconds to pan/zoom between rooms. Only used when Instant Snap is OFF.")]
+    [Tooltip("Seconds to pan/zoom for a non-door room change. Only used when Instant Snap is OFF.")]
     [SerializeField] private float _transitionDuration = 0.35f;
 
     [Tooltip("Extra world-space padding added around the room bounds so walls aren't flush against the screen edge.")]
@@ -33,14 +45,21 @@ public class RoomCamera : MonoBehaviour
     private Camera _camera;
     private Vector2Int? _currentRoomGridPos;
     private Coroutine _transitionRoutine;
+    private bool _isDoorTransitioning;
 
     private void Awake()
     {
+        Instance = this;
         _camera = GetComponent<Camera>();
 
         if (!_camera.orthographic)
             Debug.LogWarning("[RoomCamera] Camera is not Orthographic — room framing assumes an "
                 + "orthographic camera and won't size correctly in Perspective mode.");
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 
     private void Start()
@@ -53,6 +72,10 @@ public class RoomCamera : MonoBehaviour
 
     private void LateUpdate()
     {
+        // A door crossing is already driving the player's position and the camera's framing
+        // frame-by-frame in TransitionAcrossRooms() — don't fight it here.
+        if (_isDoorTransitioning) return;
+
         if (_target == null)
         {
             if (PlayerMovement.Instance != null) _target = PlayerMovement.Instance.transform;
@@ -70,6 +93,84 @@ public class RoomCamera : MonoBehaviour
             _currentRoomGridPos = room.Value.GridPos;
             MoveToRoom(room.Value, instant: _instantSnap || _transitionDuration <= 0f);
         }
+    }
+
+    /// <summary>
+    /// Call this instead of PlayerMovement.TeleportTo() when the player is crossing a door.
+    /// Locks player control, then glides the player to 'destination' and pans/zooms the camera
+    /// to whatever room contains that destination, in lockstep, over _doorTransitionDuration.
+    /// Falls back to an instant teleport if the destination isn't inside any known room (should
+    /// only happen if dungeon data is missing) or if a transition is already in progress.
+    /// </summary>
+    public void BeginRoomTransition(PlayerMovement player, Vector3 destination)
+    {
+        if (player == null) return;
+
+        if (_isDoorTransitioning)
+        {
+            // Already mid-transition — ignore a second trigger overlap rather than fighting it.
+            return;
+        }
+
+        if (DungeonManager.Instance == null)
+        {
+            player.TeleportTo(destination);
+            return;
+        }
+
+        Vector2Int destCell = DungeonManager.WorldToGridCell(destination);
+        Room? targetRoom = DungeonManager.Instance.GetRoomAtGrid(destCell);
+
+        if (targetRoom == null)
+        {
+            Debug.LogWarning("[RoomCamera] BeginRoomTransition destination isn't inside any known room — falling back to instant teleport.");
+            player.TeleportTo(destination);
+            return;
+        }
+
+        if (_transitionRoutine != null) StopCoroutine(_transitionRoutine);
+        _transitionRoutine = StartCoroutine(TransitionAcrossRooms(player, destination, targetRoom.Value));
+    }
+
+    private IEnumerator TransitionAcrossRooms(PlayerMovement player, Vector3 destination, Room targetRoom)
+    {
+        _isDoorTransitioning = true;
+        player.SetControlEnabled(false);
+
+        Vector3 startPlayerPos = player.transform.position;
+        Vector3 startCamPos = transform.position;
+        float startCamSize = _camera.orthographicSize;
+
+        Vector3 targetCamPos = new Vector3(
+            targetRoom.GridPos.x + targetRoom.Width / 2f,
+            targetRoom.GridPos.y + targetRoom.Height / 2f,
+            transform.position.z);
+        float targetCamSize = CalculateOrthoSize(targetRoom.Width, targetRoom.Height);
+
+        float duration = Mathf.Max(0.01f, _doorTransitionDuration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / duration);
+
+            player.transform.position = Vector3.Lerp(startPlayerPos, destination, t);
+            transform.position = Vector3.Lerp(startCamPos, targetCamPos, t);
+            _camera.orthographicSize = Mathf.Lerp(startCamSize, targetCamSize, t);
+
+            yield return null;
+        }
+
+        player.transform.position = destination;
+        transform.position = targetCamPos;
+        _camera.orthographicSize = targetCamSize;
+
+        _currentRoomGridPos = targetRoom.GridPos;
+
+        player.SetControlEnabled(true);
+        _isDoorTransitioning = false;
+        _transitionRoutine = null;
     }
 
     private void SnapToCurrentRoom()

@@ -94,7 +94,8 @@ public struct Room
         GridPos = gridPos;
         Width = width;
         Height = height;
-        Doors = DoorDirection.None;
+        Doors = doors; // was hardcoded to DoorDirection.None, discarding the caller's value —
+                       // this silently broke every generated room's doors (see FloorLayout.BuildRooms)
         EnemySpawns = System.Array.Empty<EnemySpawn>();
         FloorTile = null;
         TopWallTile = null;
