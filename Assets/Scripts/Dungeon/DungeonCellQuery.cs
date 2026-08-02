@@ -14,9 +14,15 @@ public class DungeonCellQuery
     private Dictionary<Vector2Int, CellState> _cellLookup;
     private Dictionary<Vector2Int, int> _obstacleHazardDamage;
     private List<Room> _rooms;
+    private HashSet<Vector2Int> _doorCorridorCells;
 
     /// <summary>Raw cell lookup, exposed for DungeonDecorationPainter's floor-decoration pass.</summary>
     public IReadOnlyDictionary<Vector2Int, CellState> CellLookup => _cellLookup;
+
+    /// <summary>Every gap-tile between two connected rooms' doors, registered as Floor. Exposed so
+    /// DungeonManager can paint an actual floor tile there too (visually, it used to be empty
+    /// space — "nothing" — between rooms, which is also what let the player fall through it).</summary>
+    public IReadOnlyCollection<Vector2Int> DoorCorridorCells => _doorCorridorCells;
 
     /// <summary>Rebuilds the lookup tables from the current room list. Call once per generation,
     /// after ApplyRandomRoomStyle and before anything queries cell state.</summary>
@@ -25,6 +31,7 @@ public class DungeonCellQuery
         _rooms = rooms;
         _cellLookup = new Dictionary<Vector2Int, CellState>();
         _obstacleHazardDamage = new Dictionary<Vector2Int, int>();
+        _doorCorridorCells = new HashSet<Vector2Int>();
 
         foreach (var room in rooms)
         {
@@ -36,16 +43,37 @@ public class DungeonCellQuery
                     _obstacleHazardDamage[cell.CellPos] = cell.ObstacleDamage;
             }
 
-            // Door threshold tiles sit just outside the room's own floor rect, in the gap
-            // between rooms — absent from room.Cells, so without this they'd read as
-            // CellState.Void and PlayerHazardDetector would fall-damage the player mid-doorway,
-            // before ever reaching a door's EntryTrigger. Registering them as Floor keeps door
-            // tiles walkable.
+            // The gap between two connected rooms (DungeonGridConstants.RoomGap tiles wide) sits
+            // entirely outside every room's Cells array, so without this it reads as Void the
+            // whole way across. That let the player fall through mid-door-crossing (RoomCamera
+            // lerps the player's position straight across this gap while transitioning, and
+            // PlayerHazardDetector keeps checking cell state every FixedUpdate the whole time —
+            // it isn't paused during the transition). Registering the FULL corridor — not just
+            // the single door-threshold tile — as Floor keeps the entire crossing walkable.
             foreach (var dir in AllDirections)
             {
                 if ((room.Doors & dir) == 0) continue;
-                _cellLookup[DungeonGeometry.GetDoorWallCell(room, dir)] = CellState.Floor;
+
+                foreach (var corridorCell in GetCorridorCells(room, dir))
+                {
+                    _cellLookup[corridorCell] = CellState.Floor;
+                    _doorCorridorCells.Add(corridorCell);
+                }
             }
+        }
+    }
+
+    /// <summary>The run of cells from a room's own door-wall tile, extending outward across the
+    /// gap toward the connected room's door-wall tile — DungeonGridConstants.RoomGap cells long.</summary>
+    private static IEnumerable<Vector2Int> GetCorridorCells(Room room, DoorDirection dir)
+    {
+        Vector2Int cursor = DungeonGeometry.GetDoorWallCell(room, dir);
+        Vector2Int step = DungeonGeometry.UnitOffset(dir);
+
+        for (int i = 0; i < DungeonGridConstants.RoomGap; i++)
+        {
+            yield return cursor;
+            cursor += step;
         }
     }
 

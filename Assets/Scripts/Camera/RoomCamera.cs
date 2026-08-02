@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -47,6 +48,17 @@ public class RoomCamera : MonoBehaviour
     private Coroutine _transitionRoutine;
     private bool _isDoorTransitioning;
 
+    /// <summary>Fired every time the tracked "current room" changes — via door crossing, instant
+    /// snap, or smooth non-door transition. Listeners (e.g. MinimapController) get the full Room
+    /// struct, not just its GridPos, so they don't need a second lookup.</summary>
+    public event Action<Room> OnRoomEntered;
+
+    /// <summary>The room the tracked target is currently considered to be in, kept in sync with
+    /// every OnRoomEntered firing. Lets a listener that subscribes late (e.g. in its own Start(),
+    /// where MonoBehaviour Start() order vs. this component's Start() isn't guaranteed) pull the
+    /// current state directly instead of only relying on catching the next event.</summary>
+    public Room? CurrentRoom { get; private set; }
+
     private void Awake()
     {
         Instance = this;
@@ -91,6 +103,8 @@ public class RoomCamera : MonoBehaviour
         if (_currentRoomGridPos == null || room.Value.GridPos != _currentRoomGridPos.Value)
         {
             _currentRoomGridPos = room.Value.GridPos;
+            CurrentRoom = room.Value;
+            OnRoomEntered?.Invoke(room.Value);
             MoveToRoom(room.Value, instant: _instantSnap || _transitionDuration <= 0f);
         }
     }
@@ -167,6 +181,8 @@ public class RoomCamera : MonoBehaviour
         _camera.orthographicSize = targetCamSize;
 
         _currentRoomGridPos = targetRoom.GridPos;
+        CurrentRoom = targetRoom;
+        OnRoomEntered?.Invoke(targetRoom);
 
         player.SetControlEnabled(true);
         _isDoorTransitioning = false;
@@ -182,6 +198,8 @@ public class RoomCamera : MonoBehaviour
         if (room == null) return;
 
         _currentRoomGridPos = room.Value.GridPos;
+        CurrentRoom = room.Value;
+        OnRoomEntered?.Invoke(room.Value);
         MoveToRoom(room.Value, instant: true);
     }
 

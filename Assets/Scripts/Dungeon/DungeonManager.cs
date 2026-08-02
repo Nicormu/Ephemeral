@@ -225,6 +225,12 @@ public class DungeonManager : MonoBehaviour
         foreach (var room in _currentLayout.Rooms)
             SpawnRoomFloor(room);
 
+        // Fills the gap between two connected rooms' doors with the same floor tile — this used
+        // to be completely unpainted ("nothing"), which is also what let the player fall through
+        // it mid-crossing (see DungeonCellQuery.Build()). Must run after _cellQuery.Build(), which
+        // already happened before SpawnDungeonVisuals() was called from Initialize().
+        SpawnDoorCorridorFloors();
+
         SpawnVoidTiles();
 
         // Walls are never hand-placed — derived from adjacency, using the chosen style's tiles.
@@ -264,6 +270,17 @@ public class DungeonManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    /// <summary>Paints the same floor tile used by the dungeon's chosen style across every
+    /// door-to-door corridor cell (see DungeonCellQuery.DoorCorridorCells), so the gap between
+    /// rooms reads as a walkable connector instead of empty space.</summary>
+    private void SpawnDoorCorridorFloors()
+    {
+        if (floorTilemap == null || _chosenStyle == null || _chosenStyle.FloorTile == null) return;
+
+        foreach (var cell in _cellQuery.DoorCorridorCells)
+            floorTilemap.SetTile(new Vector3Int(cell.x, cell.y, 0), _chosenStyle.FloorTile);
     }
 
     private void SpawnVoidTiles()
