@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,6 +15,10 @@ public class MinimapController : MonoBehaviour
     [SerializeField] private int _visibleRadiusX = 2;
     [SerializeField] private int _visibleRadiusY = 2;
 
+    [Header("Animation")]
+    [Tooltip("Seconds for minimap icons to glide into their new position when the current room changes.")]
+    [SerializeField] private float _repositionDuration = 0.25f;
+
     [Header("Colors")]
     [SerializeField] private Color _currentRoomColor = Color.white;
     [SerializeField] private Color _visitedRoomColor = new Color(0.75f, 0.75f, 0.75f, 1f);
@@ -23,13 +28,14 @@ public class MinimapController : MonoBehaviour
         { DoorDirection.North, DoorDirection.South, DoorDirection.East, DoorDirection.West };
 
     private readonly Dictionary<Vector2Int, Room> _roomsByLogicalCoord = new();
-    private readonly Dictionary<Vector2Int, Image> _icons = new(); // Back to just simple Images!
+    private readonly Dictionary<Vector2Int, Image> _icons = new();
     private readonly HashSet<Vector2Int> _visited = new();
     private readonly HashSet<Vector2Int> _known = new();
 
     private Vector2Int? _currentLogicalCoord;
     private int _strideX;
     private int _strideY;
+    private Coroutine _repositionRoutine;
 
     private void Start()
     {
@@ -53,6 +59,9 @@ public class MinimapController : MonoBehaviour
     {
         if (RoomCamera.Instance != null)
             RoomCamera.Instance.OnRoomEntered -= HandleRoomEntered;
+
+        if (_repositionRoutine != null)
+            StopCoroutine(_repositionRoutine);
     }
 
     private void ResizeMapContainer()
@@ -89,7 +98,7 @@ public class MinimapController : MonoBehaviour
             rt.sizeDelta = new Vector2(_cellSize, _cellSize);
 
             var image = instance.GetComponent<Image>();
-            
+
             instance.SetActive(false);
             _icons[kv.Key] = image;
         }
@@ -98,15 +107,15 @@ public class MinimapController : MonoBehaviour
     private void HandleRoomEntered(Room room)
     {
         Vector2Int logical = ToLogicalCoord(room.GridPos);
-        
+
         _currentLogicalCoord = logical;
         _visited.Add(logical);
         _known.Remove(logical);
 
-        // This keeps the fog-of-war working properly so you only see rooms connected by paths
+        // Keeps fog-of-war working: only reveal rooms connected by an actual door path.
         foreach (var dir in AllDirections)
         {
-            if ((room.Doors & dir) == 0) continue; 
+            if ((room.Doors & dir) == 0) continue;
 
             Vector2Int neighborLogical = logical + DungeonGeometry.UnitOffset(dir);
             if (_visited.Contains(neighborLogical)) continue;
@@ -118,19 +127,52 @@ public class MinimapController : MonoBehaviour
         RepositionIcons();
     }
 
+    /// <summary>Starts (or restarts) a smooth glide of every icon toward its new anchored
+    /// position relative to the current room, instead of snapping instantly.</summary>
     private void RepositionIcons()
     {
         if (!_currentLogicalCoord.HasValue) return;
-        Vector2Int origin = _currentLogicalCoord.Value;
+
+        if (_repositionRoutine != null)
+            StopCoroutine(_repositionRoutine);
+
+        _repositionRoutine = StartCoroutine(AnimateReposition(_currentLogicalCoord.Value));
+    }
+
+    private IEnumerator AnimateReposition(Vector2Int origin)
+    {
+        // Snapshot start/target positions once — icons that are currently invisible still get
+        // a valid target so they slide in cleanly the instant RefreshVisuals() turns them on.
+        var starts = new Dictionary<Vector2Int, Vector2>(_icons.Count);
+        var targets = new Dictionary<Vector2Int, Vector2>(_icons.Count);
 
         foreach (var kv in _icons)
         {
-            Image image = kv.Value;
             Vector2Int relative = kv.Key - origin;
-            image.rectTransform.anchoredPosition = new Vector2(
+            starts[kv.Key] = kv.Value.rectTransform.anchoredPosition;
+            targets[kv.Key] = new Vector2(
                 relative.x * (_cellSize + _cellSpacing),
                 relative.y * (_cellSize + _cellSpacing));
         }
+
+        float duration = Mathf.Max(0.01f, _repositionDuration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / duration);
+
+            foreach (var kv in _icons)
+                kv.Value.rectTransform.anchoredPosition = Vector2.Lerp(starts[kv.Key], targets[kv.Key], t);
+
+            yield return null;
+        }
+
+        foreach (var kv in _icons)
+            kv.Value.rectTransform.anchoredPosition = targets[kv.Key];
+
+        _repositionRoutine = null;
     }
 
     private void RefreshVisuals()

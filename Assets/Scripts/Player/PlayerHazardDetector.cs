@@ -15,11 +15,8 @@ public class PlayerHazardDetector : MonoBehaviour
     [SerializeField] private int _voidFallDamage = 1;
 
     [Header("Recovery")]
-    [Tooltip("Delay before the player is returned to safety after hitting a hazard.")]
-    [SerializeField] private float _recoveryDelay = 0.6f;
-
-    [Tooltip("Time between hazard damage triggers (prevents rapid re-hitting).")]
-    [SerializeField] private float _damageCooldown = 1.5f;
+    [Tooltip("Single timer that does two jobs: (1) how long the player hangs in the void before being teleported back to safety, and (2) how long the hazard system waits afterward before it will trigger on this player again.")]
+    [SerializeField] private float _hazardRecoveryTime = 0.6f;
 
     private Rigidbody2D _rb;
     private PlayerMovement _movement;
@@ -65,8 +62,9 @@ public class PlayerHazardDetector : MonoBehaviour
         // repeat-hit tick, or full recovery), so FixedUpdate can never get permanently blocked.
         try
         {
-            // Shared cooldown across all hazard types (Void, Fire, future ones).
-            if (Time.time - _lastDamageTime < _damageCooldown)
+            // Single cooldown across all hazard types (Void, Fire, future ones) — reused as
+            // the recovery wait below, so there's only one number to tune per hazard cycle.
+            if (Time.time - _lastDamageTime < _hazardRecoveryTime)
                 yield break;
 
             bool firstHit = PlayerHealth.Instance != null && !PlayerHealth.Instance.IsInvulnerable;
@@ -88,7 +86,7 @@ public class PlayerHazardDetector : MonoBehaviour
             PlayerHealth.Instance?.TakeDamage(damageAmount);
 
             // Wait for recovery delay, then teleport to the nearest safe floor tile.
-            yield return new WaitForSeconds(_recoveryDelay);
+            yield return new WaitForSeconds(_hazardRecoveryTime);
 
             Vector3? safePos = DungeonManager.Instance.FindNearestSafePositionInRoom(transform.position);
 

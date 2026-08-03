@@ -1,10 +1,46 @@
 fileFormatVersion: 2
-guid: a04042ccd1d592fffb407ca227f326f4
+guid: 87e65928744b9d8ada9101927b138906
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5048880145460850602
-    second: DefaultFloorTile_0
+      213: 7353621977714259684
+    second: untitled_0
+  - first:
+      213: -5342429030663673724
+    second: untitled_1
+  - first:
+      213: 1081222845986457982
+    second: untitled_2
+  - first:
+      213: -5117701924429426118
+    second: untitled_3
+  - first:
+      213: 4319901091233747319
+    second: untitled_4
+  - first:
+      213: 2450202294015016391
+    second: untitled_5
+  - first:
+      213: -4761267709483648562
+    second: untitled_6
+  - first:
+      213: -7517417562891924359
+    second: untitled_7
+  - first:
+      213: 3358815503287563037
+    second: untitled_8
+  - first:
+      213: -6957558460618867085
+    second: untitled_9
+  - first:
+      213: 1657745150005237926
+    second: untitled_10
+  - first:
+      213: -2007463274386964255
+    second: untitled_11
+  - first:
+      213: 4815050019263289243
+    second: untitled_12
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -37,7 +73,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 1
+    filterMode: 0
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -75,7 +111,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 1
+    textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -113,7 +149,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: DefaultFloorTile_0
+      name: PlayerSpirit_0
       rect:
         serializedVersion: 2
         x: 0
@@ -126,16 +162,16 @@ TextureImporter:
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: aaf67bffdb9311640800000000000000
-      internalID: 5048880145460850602
+      spriteID: 91e8a5541fe1e29c7acaa3dfefe061a5
+      internalID: 1239637081
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_1
+      name: PlayerSpirit_1
       rect:
         serializedVersion: 2
         x: 64
@@ -150,14 +186,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: d27e5912c96985a659519e366b356eef
-      internalID: 1022746306
+      spriteID: 3e96dabc1ff3dc27b9efeba5c4a6530b
+      internalID: 831363693
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_2
+      name: PlayerSpirit_2
       rect:
         serializedVersion: 2
         x: 128
@@ -172,14 +208,36 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 8cf64c07a3bf68ed28a1ae5fa6c9d593
-      internalID: -1455769566
+      spriteID: 8dfe77010986e5b06810db6a75871cdb
+      internalID: -23723487
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_3
+      name: PlayerSpirit_3
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 128
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 81947621c29b58aeb862874a391fdc21
+      internalID: -370922416
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PlayerSpirit_4
       rect:
         serializedVersion: 2
         x: 0
@@ -194,14 +252,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 6ae04ba61e77203898359962c7522f3f
-      internalID: -563294786
+      spriteID: b555aca37f7c14dfaaae8689d51d455e
+      internalID: -556862297
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_4
+      name: PlayerSpirit_5
       rect:
         serializedVersion: 2
         x: 64
@@ -216,14 +274,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: a94c9f93b3104d9a39e09354d0a12872
-      internalID: -1725070589
+      spriteID: 1202c5d820031de7888b331aa8b4ea2e
+      internalID: 1965882213
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_5
+      name: PlayerSpirit_6
       rect:
         serializedVersion: 2
         x: 128
@@ -238,14 +296,58 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 377d8a0d489cc79dead08b456c72dd36
-      internalID: 294853763
+      spriteID: 6d22f9e8722493970b040f54f11a295d
+      internalID: 2028470542
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_6
+      name: PlayerSpirit_7
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 64
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9e0ac62a9f6e7f117b5d1c6d9ac0b169
+      internalID: -900356698
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PlayerSpirit_8
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 64
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b6d97b15a8979dffba369672b2d59596
+      internalID: 2064838313
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PlayerSpirit_9
       rect:
         serializedVersion: 2
         x: 0
@@ -260,14 +362,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 1877855f740b75ace95021e5d4afb74d
-      internalID: -606658335
+      spriteID: ea9c8e48095e9c0b998b5dcdd2616cf7
+      internalID: -1683922810
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_7
+      name: PlayerSpirit_10
       rect:
         serializedVersion: 2
         x: 64
@@ -282,36 +384,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: c3b79a2e6aa3b059ca5edfb5c05df505
-      internalID: 951070906
+      spriteID: 2c501adb3829bb24dbbfbd33514f3ec7
+      internalID: -183296179
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_8
-      rect:
-        serializedVersion: 2
-        x: 128
-        y: 0
-        width: 64
-        height: 64
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 0a43689fc3ff49537aca0f1802ef9af2
-      internalID: 999177967
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: DefaultFloorTile_9
+      name: PlayerSpirit_11
       rect:
         serializedVersion: 2
         x: 192
@@ -326,8 +406,30 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 7bc09b5f13abf582c8c13d79c05440cc
-      internalID: 1216091434
+      spriteID: e5169d9cc6dd8675fa6c68bb69ec6a8d
+      internalID: -1449381185
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PlayerSpirit_12
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 0
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d47977ad2d2b5ebcfb6abd64c8207e8a
+      internalID: -243905332
       vertices: []
       indices: 
       edges: []
@@ -336,7 +438,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 4f5429aeb31cd23cd9a72abee39d05c9
+    spriteID: 7084d54821f217813a2b25a0a7d72200
     internalID: 0
     vertices: []
     indices: 
@@ -348,16 +450,19 @@ TextureImporter:
       - key: SpriteEditor.SliceSettings
         value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":1,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      DefaultFloorTile_0: 5048880145460850602
-      DefaultFloorTile_1: 1022746306
-      DefaultFloorTile_2: -1455769566
-      DefaultFloorTile_3: -563294786
-      DefaultFloorTile_4: -1725070589
-      DefaultFloorTile_5: 294853763
-      DefaultFloorTile_6: -606658335
-      DefaultFloorTile_7: 951070906
-      DefaultFloorTile_8: 999177967
-      DefaultFloorTile_9: 1216091434
+      PlayerSpirit_0: 1239637081
+      PlayerSpirit_1: 831363693
+      PlayerSpirit_10: -183296179
+      PlayerSpirit_11: -1449381185
+      PlayerSpirit_12: -243905332
+      PlayerSpirit_2: -23723487
+      PlayerSpirit_3: -370922416
+      PlayerSpirit_4: -556862297
+      PlayerSpirit_5: 1965882213
+      PlayerSpirit_6: 2028470542
+      PlayerSpirit_7: -900356698
+      PlayerSpirit_8: 2064838313
+      PlayerSpirit_9: -1683922810
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
