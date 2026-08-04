@@ -149,7 +149,7 @@ public class RoomCamera : MonoBehaviour
     private IEnumerator TransitionAcrossRooms(PlayerMovement player, Vector3 destination, Room targetRoom)
     {
         _isDoorTransitioning = true;
-        player.SetControlEnabled(false);
+        player.SetInputEnabled(false);
 
         Vector3 startPlayerPos = player.transform.position;
         Vector3 startCamPos = transform.position;
@@ -184,7 +184,7 @@ public class RoomCamera : MonoBehaviour
         CurrentRoom = targetRoom;
         OnRoomEntered?.Invoke(targetRoom);
 
-        player.SetControlEnabled(true);
+        player.SetInputEnabled(true);
         _isDoorTransitioning = false;
         _transitionRoutine = null;
     }

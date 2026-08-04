@@ -28,6 +28,7 @@ public class PlayerMovement : MonoBehaviour
 
     // -- state --
     private PlayerState _currentState;
+    private bool _inputEnabled = true;
 
     private float _lastRollTime;
 
@@ -139,22 +140,22 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleMovement()
     {
-        // Read input axes (WASD / arrow keys).
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
+        Vector2 input = Vector2.zero;
 
-        Vector2 input = new Vector2(horizontal, vertical);
+        if (_inputEnabled)
+        {
+            input = new Vector2(
+                Input.GetAxisRaw("Horizontal"),
+                Input.GetAxisRaw("Vertical"));
 
-        // Clamp to unit length so diagonal movement isn't faster.
-        if (input.magnitude > 1f)
-            input.Normalize();
+            if (input.magnitude > 1f)
+                input.Normalize();
+        }
 
-        // Update direction for later use by camera / UI.
         _currentDirection = input;
 
         if (input.sqrMagnitude < Mathf.Epsilon)
         {
-            // No input received — idle.
             SetState(PlayerState.Idle);
             _rb.linearVelocity = Vector2.zero;
         }
@@ -206,16 +207,15 @@ public class PlayerMovement : MonoBehaviour
     /// snag the player on a closed/misaligned door collider (or anything else) along the way.
     /// Re-enabled the instant control is handed back.
     /// </summary>
-    public void SetControlEnabled(bool value)
+    public void SetInputEnabled(bool value)
     {
-        enabled = value;
+        _inputEnabled = value;
 
-        if (!value && _rb != null)
+        if (!value)
             _rb.linearVelocity = Vector2.zero;
 
         if (_collider != null)
             _collider.enabled = value;
     }
-
     #endregion
 }
