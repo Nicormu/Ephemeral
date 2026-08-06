@@ -35,7 +35,6 @@ public class PlayerMovement : MonoBehaviour
     // -- direction the player is facing (cached to avoid normalizing every frame) --
     private Vector2 _currentDirection;
 
-    // -- last known facing direction, used when no input is provided (e.g. at startup) --
     private Vector2 _lastFacingDirection = Vector2.right;
 
     // -- properties --
@@ -170,10 +169,7 @@ public class PlayerMovement : MonoBehaviour
 
     #region Rolling
 
-    // private void HandleRolling()
-    // {
-    //     ...
-    // }
+    // Re-enable when animations are ready.
 
     #endregion
 

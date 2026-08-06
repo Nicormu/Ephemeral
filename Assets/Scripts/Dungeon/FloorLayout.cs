@@ -4,8 +4,7 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Genera un layout de dungeon usando un algoritmo BFS orientado a grafo — reflejando el
-/// enfoque com�nmente documentado de The Binding of Isaac.
+/// Generates a dungeon layout using BFS graph growth — inspired by The Binding of Isaac's procedural design.
 /// </summary>
 public static class FloorLayout
 {
@@ -225,15 +224,11 @@ public static class FloorLayout
         }
     }
 
-    // -- Step 6: convert graph cells into placed Rooms, picking a template per (type, doors) --
     private static List<Room> BuildRooms(Dictionary<Vector2Int, CellNode> cells, System.Random rng)
     {
         var rooms = new List<Room>();
 
-        // Cada "celda" del grafo (kv.Key) sigue siendo un paso de 1 unidad en el espacio l�gico
-        // del BFS. Al pasar a coordenadas de tile la multiplicamos por (tama�o de sala + gap),
-        // en vez de solo el tama�o de sala, para que las salas queden separadas por
-        // DungeonGridConstants.RoomGap tiles vac�os en vez de pegadas borde con borde.
+        // strideX/y include the gap so rooms leave empty tiles between them
         int strideX = RoomTemplate.RoomTileSize.x + DungeonGridConstants.RoomGap;
         int strideY = RoomTemplate.RoomTileSize.y + DungeonGridConstants.RoomGap;
 

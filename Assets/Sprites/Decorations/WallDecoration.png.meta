@@ -153,7 +153,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 0
+        y: 384
         width: 64
         height: 64
       alignment: 0
@@ -175,7 +175,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 64
-        y: 0
+        y: 384
         width: 64
         height: 64
       alignment: 0
@@ -197,7 +197,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 128
-        y: 0
+        y: 384
         width: 64
         height: 64
       alignment: 0
@@ -218,8 +218,8 @@ TextureImporter:
       name: WallDecoration_3
       rect:
         serializedVersion: 2
-        x: 192
-        y: 0
+        x: 0
+        y: 320
         width: 64
         height: 64
       alignment: 0
@@ -240,8 +240,8 @@ TextureImporter:
       name: WallDecoration_4
       rect:
         serializedVersion: 2
-        x: 256
-        y: 0
+        x: 64
+        y: 320
         width: 64
         height: 64
       alignment: 0
@@ -262,8 +262,8 @@ TextureImporter:
       name: WallDecoration_5
       rect:
         serializedVersion: 2
-        x: 320
-        y: 0
+        x: 128
+        y: 320
         width: 64
         height: 64
       alignment: 0
@@ -284,8 +284,8 @@ TextureImporter:
       name: WallDecoration_6
       rect:
         serializedVersion: 2
-        x: 384
-        y: 0
+        x: 0
+        y: 256
         width: 64
         height: 64
       alignment: 0
@@ -306,8 +306,8 @@ TextureImporter:
       name: WallDecoration_7
       rect:
         serializedVersion: 2
-        x: 448
-        y: 0
+        x: 64
+        y: 256
         width: 64
         height: 64
       alignment: 0
@@ -328,8 +328,8 @@ TextureImporter:
       name: WallDecoration_8
       rect:
         serializedVersion: 2
-        x: 512
-        y: 0
+        x: 128
+        y: 256
         width: 64
         height: 64
       alignment: 0
@@ -350,8 +350,8 @@ TextureImporter:
       name: WallDecoration_9
       rect:
         serializedVersion: 2
-        x: 576
-        y: 0
+        x: 0
+        y: 192
         width: 64
         height: 64
       alignment: 0
@@ -372,8 +372,8 @@ TextureImporter:
       name: WallDecoration_10
       rect:
         serializedVersion: 2
-        x: 640
-        y: 0
+        x: 64
+        y: 192
         width: 64
         height: 64
       alignment: 0
@@ -386,6 +386,182 @@ TextureImporter:
       bones: []
       spriteID: 3d39d33f290a657fb9fb8c2dcf6f580e
       internalID: -1185228338
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WallDecoration_11
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 192
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4c53f3af3e4326627a88490094b02efe
+      internalID: -1972453675
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WallDecoration_12
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 128
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 462907ce526628bd28c17ff76b8e0b08
+      internalID: -1971465659
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WallDecoration_13
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 128
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 679ab38ea1940402c945297e045e060e
+      internalID: -1091270104
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WallDecoration_14
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 128
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3209525d40b1f07fd818a4281ee37e56
+      internalID: 994324355
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WallDecoration_15
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 64
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6fe1abc9e51e2e316884675cfb67a399
+      internalID: -367904943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WallDecoration_16
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 64
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0c68b35d82567d1dca73096af42255ce
+      internalID: -199136421
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WallDecoration_17
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 64
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 384b155e42375cf87a81fc8ab201dcde
+      internalID: -1952851925
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: WallDecoration_18
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: db45055806b48a122916671ff1b7fb47
+      internalID: 507912788
       vertices: []
       indices: 
       edges: []
@@ -409,6 +585,14 @@ TextureImporter:
       WallDecoration_0: -2988977448947673822
       WallDecoration_1: 871623092674154047
       WallDecoration_10: -1185228338
+      WallDecoration_11: -1972453675
+      WallDecoration_12: -1971465659
+      WallDecoration_13: -1091270104
+      WallDecoration_14: 994324355
+      WallDecoration_15: -367904943
+      WallDecoration_16: -199136421
+      WallDecoration_17: -1952851925
+      WallDecoration_18: 507912788
       WallDecoration_2: 8879603610801547151
       WallDecoration_3: -7695210239180188121
       WallDecoration_4: 1314349581102852874

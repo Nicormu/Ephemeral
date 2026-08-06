@@ -47,9 +47,6 @@ public class PlayerHazardDetector : MonoBehaviour
             _ => 0
         };
 
-        // Not standing on a hazard this frame — nothing to do. The flag is only ever set
-        // right below, immediately before actually starting the coroutine, so it can never
-        // get "stuck" true without a matching coroutine to reset it.
         if (damage <= 0) return;
 
         _hazardCoroutineRunning = true;

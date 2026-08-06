@@ -17,6 +17,9 @@ public class DungeonManager : MonoBehaviour
     [Header("Visual — Tilemap containers")]
     public Tilemap floorTilemap;
 
+    [Tooltip("Separate, Rule-Tile-agnostic tilemap for the floor painted across door-to-door corridors (the gap between rooms). MUST be a different Tilemap than floorTilemap: if the corridor floor lives on the same Tilemap as the room's own floor, the room's Floor Rule Tile sees continuous floor through the doorway and stops rendering its border variant right at the door, rendering the 'middle' variant instead (Rule Tile neighbor matching only looks within its own Tilemap). Same Sorting Layer/Order as floorTilemap, no collider needed.")]
+    public Tilemap corridorFloorTilemap;
+
     [Tooltip("VISIBLE wall tiles. Painted CONTINUOUSLY along every wall run — including across door gaps — so wall Rule Tiles never render a false corner next to a door. No collider needed.")]
     public Tilemap wallTilemap;
 
@@ -200,6 +203,7 @@ public class DungeonManager : MonoBehaviour
     private void SpawnDungeonVisuals()
     {
         floorTilemap?.ClearAllTiles();
+        corridorFloorTilemap?.ClearAllTiles();
         wallTilemap?.ClearAllTiles();
         wallCollisionTilemap?.ClearAllTiles();
         voidTilemap?.ClearAllTiles();
@@ -225,10 +229,14 @@ public class DungeonManager : MonoBehaviour
         foreach (var room in _currentLayout.Rooms)
             SpawnRoomFloor(room);
 
-        // Fills the gap between two connected rooms' doors with the same floor tile — this used
-        // to be completely unpainted ("nothing"), which is also what let the player fall through
-        // it mid-crossing (see DungeonCellQuery.Build()). Must run after _cellQuery.Build(), which
-        // already happened before SpawnDungeonVisuals() was called from Initialize().
+        // Fills the gap between two connected rooms' doors with the same floor tile — painted on
+        // its OWN tilemap (corridorFloorTilemap), deliberately separate from floorTilemap. If this
+        // used floorTilemap, the room's Floor Rule Tile would see continuous floor running through
+        // the doorway (Rule Tile neighbor matching only looks within its own Tilemap) and would
+        // stop rendering its border variant right at the door, showing the 'middle' variant
+        // instead — same root cause documented for walls (rooms must have true exterior edges).
+        // Must run after _cellQuery.Build(), which already happened before SpawnDungeonVisuals()
+        // was called from Initialize().
         SpawnDoorCorridorFloors();
 
         SpawnVoidTiles();
@@ -274,13 +282,23 @@ public class DungeonManager : MonoBehaviour
 
     /// <summary>Paints the same floor tile used by the dungeon's chosen style across every
     /// door-to-door corridor cell (see DungeonCellQuery.DoorCorridorCells), so the gap between
-    /// rooms reads as a walkable connector instead of empty space.</summary>
+    /// rooms reads as a walkable connector instead of empty space. Painted on corridorFloorTilemap
+    /// — NOT floorTilemap — so it never counts as a neighbor for the room's Floor Rule Tile (see
+    /// the comment on corridorFloorTilemap's declaration above for why that separation matters).</summary>
     private void SpawnDoorCorridorFloors()
     {
-        if (floorTilemap == null || _chosenStyle == null || _chosenStyle.FloorTile == null) return;
+        if (_chosenStyle == null || _chosenStyle.FloorTile == null) return;
+
+        Tilemap targetTilemap = corridorFloorTilemap != null ? corridorFloorTilemap : floorTilemap;
+
+        if (corridorFloorTilemap == null)
+            Debug.LogWarning("[DungeonManager] No Corridor Floor Tilemap assigned — falling back to "
+                + "floorTilemap for door corridors. This will cause the room's Floor Rule Tile to "
+                + "render its 'middle' variant instead of its border variant right at doorways. "
+                + "Assign a separate Tilemap to 'Corridor Floor Tilemap' to fix this.");
 
         foreach (var cell in _cellQuery.DoorCorridorCells)
-            floorTilemap.SetTile(new Vector3Int(cell.x, cell.y, 0), _chosenStyle.FloorTile);
+            targetTilemap.SetTile(new Vector3Int(cell.x, cell.y, 0), _chosenStyle.FloorTile);
     }
 
     private void SpawnVoidTiles()

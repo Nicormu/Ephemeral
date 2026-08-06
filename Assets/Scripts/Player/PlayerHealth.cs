@@ -8,7 +8,7 @@ public class PlayerHealth : MonoBehaviour
     [Header("Health")]
     [SerializeField] private int _maxHealth = 6;
 
-    [Tooltip("Brief invulnerability window after taking damage, so falling repeatedly doesn't chain-damage.")]
+    [Tooltip("Invulnerability window after taking damage to prevent rapid re-trigger.")]
     [SerializeField] private float _invulnerabilityDuration = 1f;
 
     private int _currentHealth;

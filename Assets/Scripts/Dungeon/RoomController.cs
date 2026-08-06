@@ -21,7 +21,6 @@ public class RoomController : MonoBehaviour
         RoomData = roomData;
     }
 
-    /// <summary>Spawns each enemy at its manually-marked spawn point (Room.EnemySpawns).</summary>
     public void SpawnEnemies(Room.EnemySpawn[] spawns)
     {
         if (spawns == null || spawns.Length == 0)

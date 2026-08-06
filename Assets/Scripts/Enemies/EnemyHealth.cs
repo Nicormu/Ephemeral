@@ -2,9 +2,7 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// HP and death for any enemy. Mirrors PlayerHealth's shape. RoomController relies on this
-/// GameObject being destroyed (not just deactivated) on death, since it clears a room by
-/// checking for null entries in its tracked enemy list.
+/// HP and death for enemies. RoomController expects Destroy() (not Deactivate()) on death.
 /// </summary>
 public class EnemyHealth : MonoBehaviour
 {
