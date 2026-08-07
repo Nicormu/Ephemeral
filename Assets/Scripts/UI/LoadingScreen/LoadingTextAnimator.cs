@@ -1,13 +1,11 @@
 using System.Collections;
 using UnityEngine;
-using TMPro; // Delete this line if you are using Legacy Text
-using UnityEngine.UI; // Uncomment this line if you are using Legacy Text
+using TMPro;
 
 public class LoadingTextAnimator : MonoBehaviour
 {
     [Header("UI Reference")]
-    // If using Legacy Text, change 'TextMeshProUGUI' to 'Text'
-    [SerializeField] private TextMeshProUGUI loadingText; 
+    [SerializeField] private TextMeshProUGUI loadingText;
 
     [Header("Animation Settings")]
     [SerializeField] private string baseText = "Loading";
