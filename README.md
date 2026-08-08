@@ -128,3 +128,4 @@ The current build is only the beginning, but the systems being developed now are
 **Ephemeral** is an original project by **Nicolás / Nicormu**.
 
 The game is inspired by the roguelite genre and games such as *The Binding of Isaac*, but the game's procedural systems, story, characters, and implementation are being developed specifically for Ephemeral.
+
