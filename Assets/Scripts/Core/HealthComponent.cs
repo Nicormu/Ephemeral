@@ -3,13 +3,18 @@ using UnityEngine;
 
 /// <summary>
 /// Shared health logic for any entity that can take damage and die.
-/// Use as a component on any GameObject — other scripts interact through it
-/// via TakeDamage(), Heal(), or the OnDied / OnHealthChanged events.
+/// Max Health, Starting Health, and Invulnerability Duration are configured directly here in
+/// the Inspector — this is now the ONLY place these values live. PlayerHealth / EnemyHealth no
+/// longer duplicate them; they just wrap this component's public API (TakeDamage, Heal, events)
+/// for singleton access and entity-specific behavior (e.g. auto-destroy on death for enemies).
 /// </summary>
 public class HealthComponent : MonoBehaviour
 {
     [Header("Health")]
     [SerializeField] private int _maxHealth = 3;
+
+    [Tooltip("HP this entity starts with. Can be lower than Max Health (e.g. an enemy that spawns already damaged). Set equal to Max Health for a normal full-health start.")]
+    [SerializeField] private int _startingHealth = 3;
 
     [Tooltip("Brief invulnerability after taking damage so multiple hits in one frame don't stack.")]
     [SerializeField] private float _invulnerabilityDuration = 0.1f;
@@ -27,17 +32,22 @@ public class HealthComponent : MonoBehaviour
 
     private void Awake()
     {
-        _currentHealth = _maxHealth;
+        _currentHealth = Mathf.Clamp(_startingHealth, 0, _maxHealth);
     }
 
-    /// <summary>Reconfigure health values at runtime (e.g. from a wrapper class with its own inspector defaults).</summary>
-    public void Configure(int maxHealth, float invulnerabilityDuration)
+    /// <summary>
+    /// Reconfigure health values at runtime (e.g. difficulty scaling, or spawning a "damaged"
+    /// enemy variant from code). Unlike the old Configure(), this explicitly RESETS current
+    /// health to newStartingHealth instead of just clamping whatever was left over — so the
+    /// result no longer depends on component Awake() execution order.
+    /// </summary>
+    public void Configure(int newMaxHealth, int newStartingHealth, float newInvulnerabilityDuration)
     {
-        _maxHealth = Mathf.Max(1, maxHealth);
-        // Clamp current health to new max in case it's being called before Awake()
-        // (when _currentHealth is still 0), or if max was reduced.
-        _currentHealth = Mathf.Clamp(_currentHealth, 0, _maxHealth);
-        _invulnerabilityDuration = invulnerabilityDuration;
+        _maxHealth = Mathf.Max(1, newMaxHealth);
+        _startingHealth = Mathf.Clamp(newStartingHealth, 0, _maxHealth);
+        _currentHealth = _startingHealth;
+        _invulnerabilityDuration = newInvulnerabilityDuration;
+        OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
     }
 
     /// <summary>Apply damage with invulnerability guard. Raises OnHealthChanged and possibly OnDied.</summary>
@@ -53,7 +63,7 @@ public class HealthComponent : MonoBehaviour
             Die();
     }
 
-    /// <summary>Heal back to max health. Override in a subclass to disable healing for specific entity types.</summary>
+    /// <summary>Heal up to Max Health. Override in a subclass to disable healing for specific entity types.</summary>
     public virtual void Heal(int amount)
     {
         if (IsDead || amount <= 0) return;
@@ -66,5 +76,11 @@ public class HealthComponent : MonoBehaviour
     {
         if (IsDead) return; // guard against double-die
         OnDied?.Invoke();
+    }
+
+    private void OnValidate()
+    {
+        _maxHealth = Mathf.Max(1, _maxHealth);
+        _startingHealth = Mathf.Clamp(_startingHealth, 0, _maxHealth);
     }
 }

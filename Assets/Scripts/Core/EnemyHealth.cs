@@ -1,18 +1,14 @@
 using UnityEngine;
 
 /// <summary>
-/// Enemy health — wraps HealthComponent and destroys the GameObject on death
-/// so RoomController can detect it (enemy cleanup depends on Destroy()).
+/// Enemy health — wraps HealthComponent and destroys the GameObject on death so RoomController
+/// can detect it (enemy cleanup depends on Destroy()). Max Health / Starting Health /
+/// Invulnerability are configured on the HealthComponent's own Inspector fields now (same
+/// GameObject) — this wrapper no longer duplicates or patches them.
 /// </summary>
 [RequireComponent(typeof(HealthComponent))]
 public class EnemyHealth : MonoBehaviour
 {
-    [Header("Health")]
-    [SerializeField] private int _maxHealth = 3;
-
-    [Tooltip("Brief invulnerability after taking damage, so multiple hits in one frame/overlap don't stack.")]
-    [SerializeField] private float _invulnerabilityDuration = 0.1f;
-
     private HealthComponent _health;
 
     public int CurrentHealth => _health.CurrentHealth;
@@ -26,7 +22,6 @@ public class EnemyHealth : MonoBehaviour
     private void Awake()
     {
         _health = GetComponent<HealthComponent>();
-        _health.Configure(_maxHealth, _invulnerabilityDuration);
         _health.OnDied += DestroySelf; // auto-destroy when health hits zero
     }
 

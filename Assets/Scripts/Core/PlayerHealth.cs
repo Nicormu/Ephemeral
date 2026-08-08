@@ -2,19 +2,13 @@ using UnityEngine;
 
 /// <summary>
 /// Player health — wraps HealthComponent and exposes singleton access + healing.
-/// The HealthComponent is attached to the same GameObject; PlayerHealth delegates to it
-/// and patches its default values from this class's inspector fields.
+/// Max Health / Starting Health / Invulnerability are configured on the HealthComponent's own
+/// Inspector fields now (same GameObject) — this wrapper no longer duplicates or patches them.
 /// </summary>
 [RequireComponent(typeof(HealthComponent))]
 public class PlayerHealth : MonoBehaviour
 {
     public static PlayerHealth Instance { get; private set; }
-
-    [Header("Health")]
-    [SerializeField] private int _maxHealth = 6;
-
-    [Tooltip("Invulnerability window after taking damage to prevent rapid re-trigger.")]
-    [SerializeField] private float _invulnerabilityDuration = 1f;
 
     private HealthComponent _health;
 
@@ -31,9 +25,6 @@ public class PlayerHealth : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         _health = GetComponent<HealthComponent>();
-
-        // Patch base defaults from inspector values on this wrapper.
-        _health.Configure(_maxHealth, _invulnerabilityDuration);
     }
 
     private void OnDisable()

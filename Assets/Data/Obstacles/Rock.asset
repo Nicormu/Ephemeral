@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ee41396dc32aee5794394aeec6167dd, type: 3}
   m_Name: Rock
   m_EditorClassIdentifier: Assembly-CSharp::ObstacleType
-  VisualTile: {fileID: 0}
+  VisualTile: {fileID: 11400000, guid: 1029fa5b3f48c4dda9cfb99f054ca894, type: 2}
   IsUnbreakable: 0
   BreakEffectPrefab: {fileID: 0}

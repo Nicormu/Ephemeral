@@ -12,8 +12,8 @@ public class RoomTemplateSO : ScriptableObject
     public DoorDirection Doors;
 
     [Header("Obstacles")]
-    [Tooltip("Palette of obstacle types available when painting the grid below. Each type defines its own visual, whether it blocks movement, and damage dealt if it doesn't (e.g. fire).")]
-    public List<ObstacleTypeDefinition> ObstacleTypes = new();
+    [Tooltip("Palette of obstacle types available when painting the grid below. Drag in ObstacleType assets (Create > Dungeon/Obstacle Type).")]
+    public List<ObstacleType> ObstacleTypes = new();
 
     [Header("Enemies")]
     [Tooltip("Spawn points marked on the grid below (Paint Mode: Enemy Spawn Points), in the order they were placed.")]
@@ -45,33 +45,51 @@ public class RoomTemplateSO : ScriptableObject
         return arr;
     }
 
-    /// <summary>Every non-Void cell, with its state and resolved obstacle data, in local template space.</summary>
-    public (Vector2Int pos, CellState state, TileBase obstacleTile, bool obstacleBlocksMovement, int obstacleDamage)[] GetOccupiedCells()
+    /// <summary>Every non-Void cell, with its state and resolved obstacle data, in local template
+    /// space. obstacleTileVariants is the full pool for that cell's obstacle type — the actual
+    /// per-instance tile is picked later, once per physical room in the generated dungeon (see
+    /// FloorLayout.BuildAbsoluteCells), so two rooms using the same template don't always show
+    /// the exact same variant in the exact same spot.</summary>
+    public (Vector2Int pos, CellState state, TileBase[] obstacleTileVariants, bool obstacleBlocksMovement, int obstacleDamage,
+        bool obstacleIsDestructible, int obstacleMaxHealth, GameObject obstacleBreakEffectPrefab)[] GetOccupiedCells()
     {
-        var list = new List<(Vector2Int, CellState, TileBase, bool, int)>();
+        var list = new List<(Vector2Int, CellState, TileBase[], bool, int, bool, int, GameObject)>();
         for (int y = 0; y < RoomTileSize.y; y++)
             for (int x = 0; x < RoomTileSize.x; x++)
             {
                 var state = GetCell(x, y);
                 if (state == CellState.Void) continue;
 
-                TileBase obstacleTile = null;
+                TileBase[] obstacleTileVariants = null;
                 bool blocksMovement = true;
                 int damage = 0;
+                bool isDestructible = false;
+                int maxHealth = 1;
+                GameObject breakEffectPrefab = null;
 
                 if (state == CellState.Obstacle)
                 {
                     int idx = GetObstacleTypeIndex(x, y);
-                    if (idx >= 0 && idx < ObstacleTypes.Count)
+                    if (idx >= 0 && idx < ObstacleTypes.Count && ObstacleTypes[idx] != null)
                     {
                         var def = ObstacleTypes[idx];
-                        obstacleTile = def.Tile;
+                        obstacleTileVariants = def.Tiles;
                         blocksMovement = def.BlocksMovement;
                         damage = def.Damage;
+                        isDestructible = def.IsDestructible;
+                        maxHealth = def.MaxHealth;
+                        breakEffectPrefab = def.BreakEffectPrefab;
+
+                        if (obstacleTileVariants == null || obstacleTileVariants.Length == 0)
+                            Debug.LogWarning($"[RoomTemplateSO] '{name}' obstacle type '{def.name}' has no Tiles assigned — cell at ({x},{y}) will render without a tile.");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[RoomTemplateSO] '{name}' has an Obstacle cell at ({x},{y}) pointing to an empty/missing ObstacleTypes slot (index {idx}) — treating it as a plain blocking obstacle with no tile.");
                     }
                 }
 
-                list.Add((new Vector2Int(x, y), state, obstacleTile, blocksMovement, damage));
+                list.Add((new Vector2Int(x, y), state, obstacleTileVariants, blocksMovement, damage, isDestructible, maxHealth, breakEffectPrefab));
             }
         return list.ToArray();
     }
@@ -96,21 +114,6 @@ public class RoomTemplateSO : ScriptableObject
             _obstacleTypeGrid = resized;
         }
     }
-}
-
-[System.Serializable]
-public class ObstacleTypeDefinition
-{
-    [Tooltip("Label shown in the palette dropdown. Purely for your own organization.")]
-    public string Name = "Obstacle";
-
-    public TileBase Tile;
-
-    [Tooltip("If true (default), this obstacle physically blocks the player (e.g. a rock). If false, the player can walk over it — use this for hazards like fire.")]
-    public bool BlocksMovement = true;
-
-    [Tooltip("Damage dealt if the player stands on this obstacle. Only relevant when Blocks Movement is off.")]
-    public int Damage = 0;
 }
 
 [System.Serializable]

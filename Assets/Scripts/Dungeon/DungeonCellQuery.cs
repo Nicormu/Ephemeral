@@ -85,6 +85,16 @@ public class DungeonCellQuery
     public int GetObstacleHazardDamage(Vector2Int gridCell) =>
         _obstacleHazardDamage != null && _obstacleHazardDamage.TryGetValue(gridCell, out var dmg) ? dmg : 0;
 
+    /// <summary>Marks a cell as Floor at runtime and clears any hazard-damage entry it had.
+    /// Called when a DestructibleObstacle breaks, so pathing/hazard checks immediately treat
+    /// its cell as walkable instead of waiting for the next full dungeon generation.</summary>
+    public void SetCellToFloor(Vector2Int gridCell)
+    {
+        if (_cellLookup == null) return;
+        _cellLookup[gridCell] = CellState.Floor;
+        _obstacleHazardDamage?.Remove(gridCell);
+    }
+
     /// <summary>
     /// Finds the room whose bounds contain worldPos, then returns the world-space center of the
     /// closest Floor cell within that room. Null if worldPos isn't inside any room's bounds.

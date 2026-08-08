@@ -248,7 +248,7 @@ public static class FloorLayout
             );
 
             Room room = new Room(node.Type, tileOrigin, template.Width, template.Height, node.Doors);
-            room.Cells = BuildAbsoluteCells(template.Cells, tileOrigin);
+            room.Cells = BuildAbsoluteCells(template.Cells, tileOrigin, rng);
             room.EnemySpawns = BuildAbsoluteEnemySpawns(template.EnemySpawns, tileOrigin);
             room.FloorTile = template.FloorTile;
             room.TopWallTile = template.TopWallTile;
@@ -261,19 +261,35 @@ public static class FloorLayout
         return rooms;
     }
 
+    /// <summary>Resolves each obstacle cell's final TileBase by picking one entry at random from
+    /// its ObstacleType's Tile pool — done here (once per physical room instance) rather than in
+    /// RoomTemplateSO.GetOccupiedCells (once per template, cached in RoomPool), so two rooms that
+    /// happen to reuse the same template don't always render the exact same variant.</summary>
     private static RoomCell[] BuildAbsoluteCells(
-        (Vector2Int pos, CellState state, TileBase obstacleTile, bool obstacleBlocksMovement, int obstacleDamage)[] localCells,
-        Vector2Int origin)
+        (Vector2Int pos, CellState state, TileBase[] obstacleTileVariants, bool obstacleBlocksMovement, int obstacleDamage,
+            bool obstacleIsDestructible, int obstacleMaxHealth, GameObject obstacleBreakEffectPrefab)[] localCells,
+        Vector2Int origin, System.Random rng)
     {
         var result = new RoomCell[localCells.Length];
         for (int i = 0; i < localCells.Length; i++)
+        {
+            var local = localCells[i];
+
+            TileBase resolvedTile = null;
+            if (local.obstacleTileVariants != null && local.obstacleTileVariants.Length > 0)
+                resolvedTile = local.obstacleTileVariants[rng.Next(local.obstacleTileVariants.Length)];
+
             result[i] = new RoomCell(
-                origin.x + localCells[i].pos.x,
-                origin.y + localCells[i].pos.y,
-                localCells[i].state,
-                localCells[i].obstacleTile,
-                localCells[i].obstacleBlocksMovement,
-                localCells[i].obstacleDamage);
+                origin.x + local.pos.x,
+                origin.y + local.pos.y,
+                local.state,
+                resolvedTile,
+                local.obstacleBlocksMovement,
+                local.obstacleDamage,
+                local.obstacleIsDestructible,
+                local.obstacleMaxHealth,
+                local.obstacleBreakEffectPrefab);
+        }
         return result;
     }
 

@@ -66,6 +66,7 @@ public class DungeonManager : MonoBehaviour
     private FloorLayout.DungeonResult _currentLayout;
     private GameObject _doorContainer;
     private GameObject _roomLogicContainer;
+    private GameObject _destructibleContainer;
     private Dictionary<Vector2Int, RoomController> _roomControllers;
     private bool _isGenerating;
     private RoomStyleSO _chosenStyle;
@@ -194,6 +195,11 @@ public class DungeonManager : MonoBehaviour
     public Room? GetRoomAtGrid(Vector2Int gridPos) => _cellQuery.GetRoomAtGrid(gridPos);
     public Room[] GetConnectedRooms(Room room) => _cellQuery.GetConnectedRooms(room);
 
+    /// <summary>Marks a cell as Floor at runtime. Called by DestructibleObstacle.Break() so the
+    /// cell becomes walkable/pathable the instant an obstacle is destroyed, without regenerating
+    /// the dungeon.</summary>
+    public void FreeCellToFloor(Vector2Int gridCell) => _cellQuery.SetCellToFloor(gridCell);
+
     /// <summary>Converts a world position (1 unit = 1 tile) to a grid cell.</summary>
     public static Vector2Int WorldToGridCell(Vector3 worldPos) =>
         new Vector2Int(Mathf.FloorToInt(worldPos.x), Mathf.FloorToInt(worldPos.y));
@@ -219,6 +225,10 @@ public class DungeonManager : MonoBehaviour
         if (_roomLogicContainer != null) Destroy(_roomLogicContainer);
         _roomLogicContainer = new GameObject("DungeonRoomLogic");
         _roomLogicContainer.transform.SetParent(transform);
+
+        if (_destructibleContainer != null) Destroy(_destructibleContainer);
+        _destructibleContainer = new GameObject("DungeonDestructibleObstacles");
+        _destructibleContainer.transform.SetParent(transform);
 
         if (floorTilemap == null)
         {
@@ -266,18 +276,33 @@ public class DungeonManager : MonoBehaviour
 
             if (cell.State == CellState.Obstacle && cell.ObstacleTile != null)
             {
-                if (cell.ObstacleBlocksMovement)
-                {
-                    if (obstacleTilemap != null)
-                        obstacleTilemap.SetTile(tilePos, cell.ObstacleTile);
-                }
-                else
-                {
-                    if (hazardTilemap != null)
-                        hazardTilemap.SetTile(tilePos, cell.ObstacleTile);
-                }
+                Tilemap ownerTilemap = cell.ObstacleBlocksMovement ? obstacleTilemap : hazardTilemap;
+
+                if (ownerTilemap != null)
+                    ownerTilemap.SetTile(tilePos, cell.ObstacleTile);
+
+                if (cell.ObstacleIsDestructible)
+                    SpawnDestructibleObstacle(cell, ownerTilemap, tilePos);
             }
         }
+    }
+
+    /// <summary>Spawns the runtime GameObject for one destructible obstacle cell: a self-owned
+    /// Collider2D (solid if the obstacle blocks movement, trigger otherwise — mirrors the
+    /// tile's own ObstacleBlocksMovement so contact detection matches whether the player can
+    /// actually stand there) plus a DestructibleObstacle component holding its HP and knowing
+    /// which tilemap/cell to clear when it breaks.</summary>
+    private void SpawnDestructibleObstacle(RoomCell cell, Tilemap ownerTilemap, Vector3Int tilePos)
+    {
+        var go = new GameObject($"DestructibleObstacle_{cell.X}_{cell.Y}");
+        go.transform.SetParent(_destructibleContainer.transform);
+        go.transform.position = new Vector3(cell.X + 0.5f, cell.Y + 0.5f, 0f);
+
+        var col = go.AddComponent<BoxCollider2D>();
+        col.isTrigger = !cell.ObstacleBlocksMovement;
+
+        var destructible = go.AddComponent<DestructibleObstacle>();
+        destructible.Initialize(cell.ObstacleMaxHealth, cell.ObstacleBreakEffectPrefab, ownerTilemap, tilePos, new Vector2Int(cell.X, cell.Y));
     }
 
     /// <summary>Paints the same floor tile used by the dungeon's chosen style across every

@@ -40,7 +40,7 @@ public class RoomTemplateSOEditor : Editor
     {
         if (template.ObstacleTypes == null || template.ObstacleTypes.Count == 0)
         {
-            EditorGUILayout.HelpBox("Add at least one entry to 'Obstacle Types' above to paint obstacles. Set 'Blocks Movement' off + a Damage value to make one act like fire.", MessageType.Info);
+            EditorGUILayout.HelpBox("Add at least one entry to 'Obstacle Types' above to paint obstacles. Drag in ObstacleType assets (Create > Dungeon/Obstacle Type) — set 'Blocks Movement' off + a Damage value on the asset to make one act like fire.", MessageType.Info);
             _activeObstacleType = 0;
             return;
         }
@@ -49,12 +49,20 @@ public class RoomTemplateSOEditor : Editor
         for (int i = 0; i < labels.Length; i++)
         {
             var def = template.ObstacleTypes[i];
+            if (def == null)
+            {
+                labels[i] = $"{i}: (empty slot)";
+                continue;
+            }
             string suffix = def.BlocksMovement ? "" : $" (hazard, {def.Damage} dmg)";
-            labels[i] = $"{i}: {def.Name}{suffix}";
+            labels[i] = $"{i}: {def.name}{suffix}";
         }
 
         _activeObstacleType = Mathf.Clamp(_activeObstacleType, 0, labels.Length - 1);
         _activeObstacleType = EditorGUILayout.Popup("Active Obstacle Type", _activeObstacleType, labels);
+
+        if (template.ObstacleTypes[_activeObstacleType] == null)
+            EditorGUILayout.HelpBox("The active slot is empty — assign an ObstacleType asset to it above before painting.", MessageType.Warning);
     }
 
     private void DrawGrid(RoomTemplateSO template)
@@ -152,7 +160,7 @@ public class RoomTemplateSOEditor : Editor
         if (state == CellState.Obstacle)
         {
             int idx = template.GetObstacleTypeIndex(x, y);
-            if (idx >= 0 && idx < template.ObstacleTypes.Count && !template.ObstacleTypes[idx].BlocksMovement)
+            if (idx >= 0 && idx < template.ObstacleTypes.Count && template.ObstacleTypes[idx] != null && !template.ObstacleTypes[idx].BlocksMovement)
                 return new Color(0.95f, 0.4f, 0.1f); // hazard (walkable) — orange
 
             return new Color(0.7f, 0.35f, 0.1f); // blocking obstacle — brown

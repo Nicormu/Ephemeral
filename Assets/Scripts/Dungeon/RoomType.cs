@@ -50,15 +50,28 @@ public struct RoomCell
     /// <summary>Damage dealt if the player stands here. Only meaningful when State == Obstacle and ObstacleBlocksMovement is false.</summary>
     public int ObstacleDamage;
 
+    /// <summary>Whether this obstacle can be destroyed (contact today, weapons later). Only meaningful when State == Obstacle.</summary>
+    public bool ObstacleIsDestructible;
+
+    /// <summary>Hit points before this obstacle breaks. Only meaningful when ObstacleIsDestructible is true.</summary>
+    public int ObstacleMaxHealth;
+
+    /// <summary>VFX/loot prefab spawned in this obstacle's place when it breaks. Only meaningful when ObstacleIsDestructible is true.</summary>
+    public GameObject ObstacleBreakEffectPrefab;
+
     public Vector2Int CellPos => new Vector2Int(X, Y);
 
     public RoomCell(int x, int y, CellState state = CellState.Floor, TileBase obstacleTile = null,
-        bool obstacleBlocksMovement = true, int obstacleDamage = 0)
+        bool obstacleBlocksMovement = true, int obstacleDamage = 0,
+        bool obstacleIsDestructible = false, int obstacleMaxHealth = 1, GameObject obstacleBreakEffectPrefab = null)
     {
         X = x; Y = y; State = state;
         ObstacleTile = obstacleTile;
         ObstacleBlocksMovement = obstacleBlocksMovement;
         ObstacleDamage = obstacleDamage;
+        ObstacleIsDestructible = obstacleIsDestructible;
+        ObstacleMaxHealth = obstacleMaxHealth;
+        ObstacleBreakEffectPrefab = obstacleBreakEffectPrefab;
     }
 }
 

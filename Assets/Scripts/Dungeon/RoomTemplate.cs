@@ -8,7 +8,8 @@ public class RoomTemplate
 
     public RoomType Type { get; set; }
     public DoorDirection Doors { get; set; }
-    public (Vector2Int pos, CellState state, TileBase obstacleTile, bool obstacleBlocksMovement, int obstacleDamage)[] Cells { get; set; }
+    public (Vector2Int pos, CellState state, TileBase[] obstacleTileVariants, bool obstacleBlocksMovement, int obstacleDamage,
+        bool obstacleIsDestructible, int obstacleMaxHealth, GameObject obstacleBreakEffectPrefab)[] Cells { get; set; }
     public (Vector2Int pos, GameObject prefab)[] EnemySpawns { get; set; }
 
     // Populated later by DungeonManager after a style is randomly chosen for the whole dungeon —
