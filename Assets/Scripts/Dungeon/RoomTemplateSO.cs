@@ -46,14 +46,15 @@ public class RoomTemplateSO : ScriptableObject
     }
 
     /// <summary>Every non-Void cell, with its state and resolved obstacle data, in local template
-    /// space. obstacleTileVariants is the full pool for that cell's obstacle type — the actual
-    /// per-instance tile is picked later, once per physical room in the generated dungeon (see
-    /// FloorLayout.BuildAbsoluteCells), so two rooms using the same template don't always show
-    /// the exact same variant in the exact same spot.</summary>
-    public (Vector2Int pos, CellState state, TileBase[] obstacleTileVariants, bool obstacleBlocksMovement, int obstacleDamage,
-        bool obstacleIsDestructible, int obstacleMaxHealth, GameObject obstacleBreakEffectPrefab)[] GetOccupiedCells()
+    /// space. obstacleTileVariants/obstacleSpriteVariants is the full pool for that cell's obstacle
+    /// type — the actual per-instance tile/sprite is picked later, once per physical room in the
+    /// generated dungeon (see FloorLayout.BuildAbsoluteCells), so two rooms using the same template
+    /// don't always show the exact same variant in the exact same spot.</summary>
+    public (Vector2Int pos, CellState state, TileBase[] obstacleTileVariants, Sprite[] obstacleSpriteVariants,
+        bool obstacleBlocksMovement, int obstacleDamage, bool obstacleIsDestructible, int obstacleMaxHealth,
+        GameObject obstacleBreakEffectPrefab)[] GetOccupiedCells()
     {
-        var list = new List<(Vector2Int, CellState, TileBase[], bool, int, bool, int, GameObject)>();
+        var list = new List<(Vector2Int, CellState, TileBase[], Sprite[], bool, int, bool, int, GameObject)>();
         for (int y = 0; y < RoomTileSize.y; y++)
             for (int x = 0; x < RoomTileSize.x; x++)
             {
@@ -61,6 +62,7 @@ public class RoomTemplateSO : ScriptableObject
                 if (state == CellState.Void) continue;
 
                 TileBase[] obstacleTileVariants = null;
+                Sprite[] obstacleSpriteVariants = null;
                 bool blocksMovement = true;
                 int damage = 0;
                 bool isDestructible = false;
@@ -73,23 +75,23 @@ public class RoomTemplateSO : ScriptableObject
                     if (idx >= 0 && idx < ObstacleTypes.Count && ObstacleTypes[idx] != null)
                     {
                         var def = ObstacleTypes[idx];
-                        obstacleTileVariants = def.Tiles;
+                        obstacleSpriteVariants = def.SpriteVariants;
                         blocksMovement = def.BlocksMovement;
                         damage = def.Damage;
                         isDestructible = def.IsDestructible;
                         maxHealth = def.MaxHealth;
                         breakEffectPrefab = def.BreakEffectPrefab;
 
-                        if (obstacleTileVariants == null || obstacleTileVariants.Length == 0)
-                            Debug.LogWarning($"[RoomTemplateSO] '{name}' obstacle type '{def.name}' has no Tiles assigned — cell at ({x},{y}) will render without a tile.");
+                        if (obstacleSpriteVariants == null || obstacleSpriteVariants.Length == 0)
+                            Debug.LogWarning($"[RoomTemplateSO] '{name}' obstacle type '{def.name}' has no Sprite Variants assigned — cell at ({x},{y}) will spawn without a sprite.");
                     }
                     else
                     {
-                        Debug.LogWarning($"[RoomTemplateSO] '{name}' has an Obstacle cell at ({x},{y}) pointing to an empty/missing ObstacleTypes slot (index {idx}) — treating it as a plain blocking obstacle with no tile.");
+                        Debug.LogWarning($"[RoomTemplateSO] '{name}' has an Obstacle cell at ({x},{y}) pointing to an empty/missing ObstacleTypes slot (index {idx}) — treating it as a plain blocking obstacle with no sprite.");
                     }
                 }
 
-                list.Add((new Vector2Int(x, y), state, obstacleTileVariants, blocksMovement, damage, isDestructible, maxHealth, breakEffectPrefab));
+                list.Add((new Vector2Int(x, y), state, obstacleTileVariants, obstacleSpriteVariants, blocksMovement, damage, isDestructible, maxHealth, breakEffectPrefab));
             }
         return list.ToArray();
     }

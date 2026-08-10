@@ -41,8 +41,14 @@ public struct RoomCell
     public int Y;
     public CellState State;
 
-    /// <summary>Which obstacle visual to use. Only meaningful when State == Obstacle.</summary>
+    /// <summary>Legacy — no longer consumed by DungeonManager's obstacle spawning (see
+    /// ObstacleSprite instead). Kept only for backward compatibility. Only meaningful when
+    /// State == Obstacle.</summary>
     public TileBase ObstacleTile;
+
+    /// <summary>Which sprite to use when this obstacle is spawned as a GameObject via
+    /// DungeonManager.obstaclePrefab. Only meaningful when State == Obstacle.</summary>
+    public Sprite ObstacleSprite;
 
     /// <summary>Whether this obstacle physically blocks the player. Only meaningful when State == Obstacle.</summary>
     public bool ObstacleBlocksMovement;
@@ -63,10 +69,12 @@ public struct RoomCell
 
     public RoomCell(int x, int y, CellState state = CellState.Floor, TileBase obstacleTile = null,
         bool obstacleBlocksMovement = true, int obstacleDamage = 0,
-        bool obstacleIsDestructible = false, int obstacleMaxHealth = 1, GameObject obstacleBreakEffectPrefab = null)
+        bool obstacleIsDestructible = false, int obstacleMaxHealth = 1, GameObject obstacleBreakEffectPrefab = null,
+        Sprite obstacleSprite = null)
     {
         X = x; Y = y; State = state;
         ObstacleTile = obstacleTile;
+        ObstacleSprite = obstacleSprite;
         ObstacleBlocksMovement = obstacleBlocksMovement;
         ObstacleDamage = obstacleDamage;
         ObstacleIsDestructible = obstacleIsDestructible;

@@ -261,13 +261,15 @@ public static class FloorLayout
         return rooms;
     }
 
-    /// <summary>Resolves each obstacle cell's final TileBase by picking one entry at random from
-    /// its ObstacleType's Tile pool — done here (once per physical room instance) rather than in
-    /// RoomTemplateSO.GetOccupiedCells (once per template, cached in RoomPool), so two rooms that
-    /// happen to reuse the same template don't always render the exact same variant.</summary>
+    /// <summary>Resolves each obstacle cell's final Sprite (and legacy TileBase) by picking one
+    /// entry at random from its ObstacleType's variant pools — done here (once per physical room
+    /// instance) rather than in RoomTemplateSO.GetOccupiedCells (once per template, cached in
+    /// RoomPool), so two rooms that happen to reuse the same template don't always render the
+    /// exact same variant.</summary>
     private static RoomCell[] BuildAbsoluteCells(
-        (Vector2Int pos, CellState state, TileBase[] obstacleTileVariants, bool obstacleBlocksMovement, int obstacleDamage,
-            bool obstacleIsDestructible, int obstacleMaxHealth, GameObject obstacleBreakEffectPrefab)[] localCells,
+        (Vector2Int pos, CellState state, TileBase[] obstacleTileVariants, Sprite[] obstacleSpriteVariants,
+            bool obstacleBlocksMovement, int obstacleDamage, bool obstacleIsDestructible, int obstacleMaxHealth,
+            GameObject obstacleBreakEffectPrefab)[] localCells,
         Vector2Int origin, System.Random rng)
     {
         var result = new RoomCell[localCells.Length];
@@ -279,6 +281,10 @@ public static class FloorLayout
             if (local.obstacleTileVariants != null && local.obstacleTileVariants.Length > 0)
                 resolvedTile = local.obstacleTileVariants[rng.Next(local.obstacleTileVariants.Length)];
 
+            Sprite resolvedSprite = null;
+            if (local.obstacleSpriteVariants != null && local.obstacleSpriteVariants.Length > 0)
+                resolvedSprite = local.obstacleSpriteVariants[rng.Next(local.obstacleSpriteVariants.Length)];
+
             result[i] = new RoomCell(
                 origin.x + local.pos.x,
                 origin.y + local.pos.y,
@@ -288,7 +294,8 @@ public static class FloorLayout
                 local.obstacleDamage,
                 local.obstacleIsDestructible,
                 local.obstacleMaxHealth,
-                local.obstacleBreakEffectPrefab);
+                local.obstacleBreakEffectPrefab,
+                resolvedSprite);
         }
         return result;
     }

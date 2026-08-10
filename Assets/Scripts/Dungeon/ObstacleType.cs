@@ -10,9 +10,9 @@ using UnityEngine.Tilemaps;
 [CreateAssetMenu(fileName = "NewObstacleType", menuName = "Dungeon/Obstacle Type")]
 public class ObstacleType : ScriptableObject
 {
-    [Header("Visual")]
-    [Tooltip("Tile variants drawn for this obstacle. If more than one is assigned, a random variant is picked independently for each obstacle cell painted with this type (e.g. Rock1/Rock2/Rock3) — purely visual, same BlocksMovement/Damage/Destructible behavior for all variants.")]
-    public TileBase[] Tiles;
+    [Header("Visual - Sprite Variants")]
+    [Tooltip("Sprite variants drawn for this obstacle's spawned GameObject (see DungeonManager.obstaclePrefab). If more than one is assigned, a random variant is picked independently for each obstacle cell using this type (e.g. Rock1/Rock2/Rock3) — same idea as the legacy Tiles array below, but for the SpriteRenderer-based obstacle system.")]
+    public Sprite[] SpriteVariants;
 
     [Header("Behavior")]
     [Tooltip("If true (default), this obstacle physically blocks the player (e.g. a rock). If false, the player can walk over it — use this for hazards like fire.")]

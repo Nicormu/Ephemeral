@@ -29,10 +29,11 @@ public class DungeonManager : MonoBehaviour
     [Header("Visual — Void")]
     public Tilemap voidTilemap;
 
-    [Header("Visual — Obstacles (blocking)")]
+    [Header("Visual — Obstacles (legacy, unused)")]
+    [Tooltip("No longer painted onto — obstacles are now spawned as GameObjects via obstaclePrefab, which handles proper Y-sorting against the player/each other (Tilemap tiles can't reliably sort against each other when they overlap into neighboring cells). Safe to leave unassigned.")]
     public Tilemap obstacleTilemap;
 
-    [Header("Visual — Hazards (walkable)")]
+    [Tooltip("No longer painted onto — see obstacleTilemap's tooltip above; walkable hazards (fire, etc.) now use the same obstaclePrefab GameObject system.")]
     public Tilemap hazardTilemap;
 
     [Header("Visual — Decoration (optional, floor)")]
@@ -45,6 +46,10 @@ public class DungeonManager : MonoBehaviour
     public Tilemap wallDecorationTilemap;
     public TileBase[] wallDecorationTileVariants;
     [Range(0f, 1f)] public float wallDecorationChance = 0.08f;
+
+    [Header("Obstacles")]
+    [Tooltip("Prefab instantiated for EVERY obstacle cell (blocking or walkable hazard). Needs a SpriteRenderer (sprite assigned per-instance from the cell's ObstacleType.SpriteVariants) and a Collider2D you've sized/shaped yourself — code only toggles isTrigger based on whether the obstacle blocks movement. Set its Sorting Layer to match the Player's so Transparency Sort Axis can sort them correctly.")]
+    public GameObject obstaclePrefab;
 
     [Header("Doors")]
     [Tooltip("Door art for the North (Upper) wall.")]
@@ -66,7 +71,7 @@ public class DungeonManager : MonoBehaviour
     private FloorLayout.DungeonResult _currentLayout;
     private GameObject _doorContainer;
     private GameObject _roomLogicContainer;
-    private GameObject _destructibleContainer;
+    private GameObject _obstacleContainer;
     private Dictionary<Vector2Int, RoomController> _roomControllers;
     private bool _isGenerating;
     private RoomStyleSO _chosenStyle;
@@ -226,9 +231,9 @@ public class DungeonManager : MonoBehaviour
         _roomLogicContainer = new GameObject("DungeonRoomLogic");
         _roomLogicContainer.transform.SetParent(transform);
 
-        if (_destructibleContainer != null) Destroy(_destructibleContainer);
-        _destructibleContainer = new GameObject("DungeonDestructibleObstacles");
-        _destructibleContainer.transform.SetParent(transform);
+        if (_obstacleContainer != null) Destroy(_obstacleContainer);
+        _obstacleContainer = new GameObject("DungeonObstacles");
+        _obstacleContainer.transform.SetParent(transform);
 
         if (floorTilemap == null)
         {
@@ -274,35 +279,55 @@ public class DungeonManager : MonoBehaviour
             if (room.FloorTile != null)
                 floorTilemap.SetTile(tilePos, room.FloorTile);
 
-            if (cell.State == CellState.Obstacle && cell.ObstacleTile != null)
-            {
-                Tilemap ownerTilemap = cell.ObstacleBlocksMovement ? obstacleTilemap : hazardTilemap;
-
-                if (ownerTilemap != null)
-                    ownerTilemap.SetTile(tilePos, cell.ObstacleTile);
-
-                if (cell.ObstacleIsDestructible)
-                    SpawnDestructibleObstacle(cell, ownerTilemap, tilePos);
-            }
+            if (cell.State == CellState.Obstacle)
+                SpawnObstacleInstance(cell);
         }
     }
 
-    /// <summary>Spawns the runtime GameObject for one destructible obstacle cell: a self-owned
-    /// Collider2D (solid if the obstacle blocks movement, trigger otherwise — mirrors the
-    /// tile's own ObstacleBlocksMovement so contact detection matches whether the player can
-    /// actually stand there) plus a DestructibleObstacle component holding its HP and knowing
-    /// which tilemap/cell to clear when it breaks.</summary>
-    private void SpawnDestructibleObstacle(RoomCell cell, Tilemap ownerTilemap, Vector3Int tilePos)
+    /// <summary>Spawns the runtime GameObject for one obstacle cell — blocking (rocks) or walkable
+    /// hazard (fire) alike — from obstaclePrefab. Assigns this cell's resolved sprite variant to
+    /// the prefab's SpriteRenderer, toggles the prefab's own Collider2D between solid/trigger to
+    /// match whether the obstacle blocks movement, and attaches a DestructibleObstacle if this
+    /// cell's obstacle type is destructible. Using a real GameObject (instead of a Tilemap tile)
+    /// is what lets these obstacles participate in normal Transparency Sort Axis Y-sorting against
+    /// the player and each other — Tilemap tiles can't reliably sort against each other once their
+    /// sprites are taller than one cell and overlap into neighboring cells.</summary>
+    private void SpawnObstacleInstance(RoomCell cell)
     {
-        var go = new GameObject($"DestructibleObstacle_{cell.X}_{cell.Y}");
-        go.transform.SetParent(_destructibleContainer.transform);
-        go.transform.position = new Vector3(cell.X + 0.5f, cell.Y + 0.5f, 0f);
+        if (obstaclePrefab == null)
+        {
+            Debug.LogWarning("[DungeonManager] No Obstacle Prefab assigned — obstacles will not be spawned.");
+            return;
+        }
 
-        var col = go.AddComponent<BoxCollider2D>();
-        col.isTrigger = !cell.ObstacleBlocksMovement;
+        Vector3 pos = new Vector3(cell.X + 0.5f, cell.Y + 0.5f, 0f);
+        GameObject instance = Instantiate(obstaclePrefab, pos, Quaternion.identity, _obstacleContainer.transform);
+        instance.name = $"Obstacle_{cell.X}_{cell.Y}";
 
-        var destructible = go.AddComponent<DestructibleObstacle>();
-        destructible.Initialize(cell.ObstacleMaxHealth, cell.ObstacleBreakEffectPrefab, ownerTilemap, tilePos, new Vector2Int(cell.X, cell.Y));
+        var sr = instance.GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.sprite = cell.ObstacleSprite;
+            if (cell.ObstacleSprite == null)
+                Debug.LogWarning($"[DungeonManager] Obstacle at ({cell.X},{cell.Y}) has no sprite — check that its ObstacleType has Sprite Variants assigned.");
+        }
+        else
+        {
+            Debug.LogWarning("[DungeonManager] obstaclePrefab has no SpriteRenderer — it won't be visible.");
+        }
+
+        var col = instance.GetComponent<Collider2D>();
+        if (col != null)
+            col.isTrigger = !cell.ObstacleBlocksMovement;
+        else
+            Debug.LogWarning("[DungeonManager] obstaclePrefab has no Collider2D — it won't block/detect the player.");
+
+        if (cell.ObstacleIsDestructible)
+        {
+            var destructible = instance.GetComponent<DestructibleObstacle>();
+            if (destructible == null) destructible = instance.AddComponent<DestructibleObstacle>();
+            destructible.Initialize(cell.ObstacleMaxHealth, cell.ObstacleBreakEffectPrefab, new Vector2Int(cell.X, cell.Y));
+        }
     }
 
     /// <summary>Paints the same floor tile used by the dungeon's chosen style across every
