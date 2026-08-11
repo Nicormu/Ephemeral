@@ -24,8 +24,8 @@ public enum DoorDirection
 
 /// <summary>
 /// What a single dungeon cell contains. Void cells simply aren't part of a room's Cells array.
-/// Obstacle covers both blocking hazards (rocks) and walkable damaging hazards (fire) —
-/// see RoomCell.ObstacleBlocksMovement / ObstacleDamage.
+/// Obstacle covers both blocking hazards (rocks) and walkable damaging hazards (fire, spikes) —
+/// see RoomCell.ObstacleBlocksMovement / ObstacleDamage / ObstacleIgnoredByFlight.
 /// </summary>
 public enum CellState
 {
@@ -47,14 +47,25 @@ public struct RoomCell
     public TileBase ObstacleTile;
 
     /// <summary>Which sprite to use when this obstacle is spawned as a GameObject via
-    /// DungeonManager.obstaclePrefab. Only meaningful when State == Obstacle.</summary>
+    /// ObstaclePrefab below. Only meaningful when State == Obstacle.</summary>
     public Sprite ObstacleSprite;
+
+    /// <summary>The GameObject prefab to instantiate for this obstacle cell — sourced from this
+    /// cell's ObstacleType.Prefab. Only meaningful when State == Obstacle. Can be null if the
+    /// ObstacleType asset wasn't configured with a Prefab — DungeonManager falls back to its
+    /// Fallback Obstacle Prefab in that case.</summary>
+    public GameObject ObstaclePrefab;
 
     /// <summary>Whether this obstacle physically blocks the player. Only meaningful when State == Obstacle.</summary>
     public bool ObstacleBlocksMovement;
 
     /// <summary>Damage dealt if the player stands here. Only meaningful when State == Obstacle and ObstacleBlocksMovement is false.</summary>
     public int ObstacleDamage;
+
+    /// <summary>Whether an entity with FlightComponent.IsFlying == true is immune to this
+    /// hazard's damage (e.g. true for Spikes, false for Fire). Only meaningful when State ==
+    /// Obstacle and ObstacleBlocksMovement is false — sourced from ObstacleType.IgnoredByFlyingEntities.</summary>
+    public bool ObstacleIgnoredByFlight;
 
     /// <summary>Whether this obstacle can be destroyed (contact today, weapons later). Only meaningful when State == Obstacle.</summary>
     public bool ObstacleIsDestructible;
@@ -70,13 +81,15 @@ public struct RoomCell
     public RoomCell(int x, int y, CellState state = CellState.Floor, TileBase obstacleTile = null,
         bool obstacleBlocksMovement = true, int obstacleDamage = 0,
         bool obstacleIsDestructible = false, int obstacleMaxHealth = 1, GameObject obstacleBreakEffectPrefab = null,
-        Sprite obstacleSprite = null)
+        Sprite obstacleSprite = null, GameObject obstaclePrefab = null, bool obstacleIgnoredByFlight = false)
     {
         X = x; Y = y; State = state;
         ObstacleTile = obstacleTile;
         ObstacleSprite = obstacleSprite;
+        ObstaclePrefab = obstaclePrefab;
         ObstacleBlocksMovement = obstacleBlocksMovement;
         ObstacleDamage = obstacleDamage;
+        ObstacleIgnoredByFlight = obstacleIgnoredByFlight;
         ObstacleIsDestructible = obstacleIsDestructible;
         ObstacleMaxHealth = obstacleMaxHealth;
         ObstacleBreakEffectPrefab = obstacleBreakEffectPrefab;

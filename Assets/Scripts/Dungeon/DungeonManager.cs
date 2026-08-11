@@ -29,13 +29,6 @@ public class DungeonManager : MonoBehaviour
     [Header("Visual — Void")]
     public Tilemap voidTilemap;
 
-    [Header("Visual — Obstacles (legacy, unused)")]
-    [Tooltip("No longer painted onto — obstacles are now spawned as GameObjects via obstaclePrefab, which handles proper Y-sorting against the player/each other (Tilemap tiles can't reliably sort against each other when they overlap into neighboring cells). Safe to leave unassigned.")]
-    public Tilemap obstacleTilemap;
-
-    [Tooltip("No longer painted onto — see obstacleTilemap's tooltip above; walkable hazards (fire, etc.) now use the same obstaclePrefab GameObject system.")]
-    public Tilemap hazardTilemap;
-
     [Header("Visual — Decoration (optional, floor)")]
     public Tilemap decorationTilemap;
     public TileBase[] decorationTileVariants;
@@ -48,8 +41,8 @@ public class DungeonManager : MonoBehaviour
     [Range(0f, 1f)] public float wallDecorationChance = 0.08f;
 
     [Header("Obstacles")]
-    [Tooltip("Prefab instantiated for EVERY obstacle cell (blocking or walkable hazard). Needs a SpriteRenderer (sprite assigned per-instance from the cell's ObstacleType.SpriteVariants) and a Collider2D you've sized/shaped yourself — code only toggles isTrigger based on whether the obstacle blocks movement. Set its Sorting Layer to match the Player's so Transparency Sort Axis can sort them correctly.")]
-    public GameObject obstaclePrefab;
+    [Tooltip("Optional safety net only — normally each ObstacleType asset (Rock, Fire, ...) supplies its own Prefab, so obstacle kinds can have different collider sizes/shapes. This is instantiated ONLY when a cell's ObstacleType has no Prefab assigned (a misconfigured/empty ObstacleType). Needs a SpriteRenderer + Collider2D like any obstacle prefab. Leave empty to just log a warning and skip spawning misconfigured obstacles instead.")]
+    public GameObject fallbackObstaclePrefab;
 
     [Header("Doors")]
     [Tooltip("Door art for the North (Upper) wall.")]
@@ -220,8 +213,6 @@ public class DungeonManager : MonoBehaviour
         voidTilemap?.ClearAllTiles();
         decorationTilemap?.ClearAllTiles();
         wallDecorationTilemap?.ClearAllTiles();
-        obstacleTilemap?.ClearAllTiles();
-        hazardTilemap?.ClearAllTiles();
 
         if (_doorContainer != null) Destroy(_doorContainer);
         _doorContainer = new GameObject("DungeonDoors");
@@ -285,23 +276,28 @@ public class DungeonManager : MonoBehaviour
     }
 
     /// <summary>Spawns the runtime GameObject for one obstacle cell — blocking (rocks) or walkable
-    /// hazard (fire) alike — from obstaclePrefab. Assigns this cell's resolved sprite variant to
-    /// the prefab's SpriteRenderer, toggles the prefab's own Collider2D between solid/trigger to
-    /// match whether the obstacle blocks movement, and attaches a DestructibleObstacle if this
-    /// cell's obstacle type is destructible. Using a real GameObject (instead of a Tilemap tile)
-    /// is what lets these obstacles participate in normal Transparency Sort Axis Y-sorting against
-    /// the player and each other — Tilemap tiles can't reliably sort against each other once their
-    /// sprites are taller than one cell and overlap into neighboring cells.</summary>
+    /// hazard (fire) alike. The prefab comes from THIS CELL's own ObstacleType.Prefab (falling
+    /// back to fallbackObstaclePrefab only if that's unset), so different obstacle kinds can use
+    /// differently sized/shaped prefabs instead of all sharing one generic prefab. Assigns this
+    /// cell's resolved sprite variant to the prefab's SpriteRenderer, toggles the prefab's own
+    /// Collider2D between solid/trigger to match whether the obstacle blocks movement, and
+    /// attaches a DestructibleObstacle if this cell's obstacle type is destructible. Using a real
+    /// GameObject (instead of a Tilemap tile) is what lets these obstacles participate in normal
+    /// Transparency Sort Axis Y-sorting against the player and each other — Tilemap tiles can't
+    /// reliably sort against each other once their sprites are taller than one cell and overlap
+    /// into neighboring cells.</summary>
     private void SpawnObstacleInstance(RoomCell cell)
     {
-        if (obstaclePrefab == null)
+        GameObject prefabToUse = cell.ObstaclePrefab != null ? cell.ObstaclePrefab : fallbackObstaclePrefab;
+
+        if (prefabToUse == null)
         {
-            Debug.LogWarning("[DungeonManager] No Obstacle Prefab assigned — obstacles will not be spawned.");
+            Debug.LogWarning($"[DungeonManager] Obstacle at ({cell.X},{cell.Y}) has no Prefab assigned on its ObstacleType, and no Fallback Obstacle Prefab is set — skipping spawn. Assign a Prefab on the relevant ObstacleType asset (Create > Dungeon/Obstacle Type).");
             return;
         }
 
         Vector3 pos = new Vector3(cell.X + 0.5f, cell.Y + 0.5f, 0f);
-        GameObject instance = Instantiate(obstaclePrefab, pos, Quaternion.identity, _obstacleContainer.transform);
+        GameObject instance = Instantiate(prefabToUse, pos, Quaternion.identity, _obstacleContainer.transform);
         instance.name = $"Obstacle_{cell.X}_{cell.Y}";
 
         var sr = instance.GetComponent<SpriteRenderer>();
@@ -313,14 +309,14 @@ public class DungeonManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[DungeonManager] obstaclePrefab has no SpriteRenderer — it won't be visible.");
+            Debug.LogWarning("[DungeonManager] The obstacle prefab used at this cell has no SpriteRenderer — it won't be visible.");
         }
 
         var col = instance.GetComponent<Collider2D>();
         if (col != null)
             col.isTrigger = !cell.ObstacleBlocksMovement;
         else
-            Debug.LogWarning("[DungeonManager] obstaclePrefab has no Collider2D — it won't block/detect the player.");
+            Debug.LogWarning("[DungeonManager] The obstacle prefab used at this cell has no Collider2D — it won't block/detect the player.");
 
         if (cell.ObstacleIsDestructible)
         {

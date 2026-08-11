@@ -49,12 +49,15 @@ public class RoomTemplateSO : ScriptableObject
     /// space. obstacleTileVariants/obstacleSpriteVariants is the full pool for that cell's obstacle
     /// type — the actual per-instance tile/sprite is picked later, once per physical room in the
     /// generated dungeon (see FloorLayout.BuildAbsoluteCells), so two rooms using the same template
-    /// don't always show the exact same variant in the exact same spot.</summary>
+    /// don't always show the exact same variant in the exact same spot. obstaclePrefab and
+    /// obstacleIgnoredByFlight both come straight from the cell's ObstacleType asset — single
+    /// values per obstacle KIND, defined once and shared by every RoomTemplateSO/room using that
+    /// same ObstacleType.</summary>
     public (Vector2Int pos, CellState state, TileBase[] obstacleTileVariants, Sprite[] obstacleSpriteVariants,
         bool obstacleBlocksMovement, int obstacleDamage, bool obstacleIsDestructible, int obstacleMaxHealth,
-        GameObject obstacleBreakEffectPrefab)[] GetOccupiedCells()
+        GameObject obstacleBreakEffectPrefab, GameObject obstaclePrefab, bool obstacleIgnoredByFlight)[] GetOccupiedCells()
     {
-        var list = new List<(Vector2Int, CellState, TileBase[], Sprite[], bool, int, bool, int, GameObject)>();
+        var list = new List<(Vector2Int, CellState, TileBase[], Sprite[], bool, int, bool, int, GameObject, GameObject, bool)>();
         for (int y = 0; y < RoomTileSize.y; y++)
             for (int x = 0; x < RoomTileSize.x; x++)
             {
@@ -68,6 +71,8 @@ public class RoomTemplateSO : ScriptableObject
                 bool isDestructible = false;
                 int maxHealth = 1;
                 GameObject breakEffectPrefab = null;
+                GameObject obstaclePrefab = null;
+                bool ignoredByFlight = false;
 
                 if (state == CellState.Obstacle)
                 {
@@ -81,17 +86,22 @@ public class RoomTemplateSO : ScriptableObject
                         isDestructible = def.IsDestructible;
                         maxHealth = def.MaxHealth;
                         breakEffectPrefab = def.BreakEffectPrefab;
+                        obstaclePrefab = def.Prefab;
+                        ignoredByFlight = def.IgnoredByFlyingEntities;
 
                         if (obstacleSpriteVariants == null || obstacleSpriteVariants.Length == 0)
                             Debug.LogWarning($"[RoomTemplateSO] '{name}' obstacle type '{def.name}' has no Sprite Variants assigned — cell at ({x},{y}) will spawn without a sprite.");
+
+                        if (obstaclePrefab == null)
+                            Debug.LogWarning($"[RoomTemplateSO] '{name}' obstacle type '{def.name}' has no Prefab assigned — cell at ({x},{y}) will fall back to DungeonManager's Fallback Obstacle Prefab, or spawn nothing if that's empty too.");
                     }
                     else
                     {
-                        Debug.LogWarning($"[RoomTemplateSO] '{name}' has an Obstacle cell at ({x},{y}) pointing to an empty/missing ObstacleTypes slot (index {idx}) — treating it as a plain blocking obstacle with no sprite.");
+                        Debug.LogWarning($"[RoomTemplateSO] '{name}' has an Obstacle cell at ({x},{y}) pointing to an empty/missing ObstacleTypes slot (index {idx}) — treating it as a plain blocking obstacle with no sprite/prefab.");
                     }
                 }
 
-                list.Add((new Vector2Int(x, y), state, obstacleTileVariants, obstacleSpriteVariants, blocksMovement, damage, isDestructible, maxHealth, breakEffectPrefab));
+                list.Add((new Vector2Int(x, y), state, obstacleTileVariants, obstacleSpriteVariants, blocksMovement, damage, isDestructible, maxHealth, breakEffectPrefab, obstaclePrefab, ignoredByFlight));
             }
         return list.ToArray();
     }
