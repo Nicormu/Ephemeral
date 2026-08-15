@@ -205,6 +205,11 @@ public static class FloorLayout
         }
     }
 
+    /// <summary>
+    /// Assigns final RoomType to every cell that isn't already Start/Boss/Treasure. RoomType.Corridor
+    /// was removed from the game — every remaining room is now either DeadEnd (1 door) or Normal
+    /// (2+ doors), no more random split between Normal and Corridor for opposite-pair 2-door rooms.
+    /// </summary>
     private static void ClassifyRemainingTypes(Dictionary<Vector2Int, CellNode> cells, System.Random rng)
     {
         foreach (var kv in cells)
@@ -214,13 +219,7 @@ public static class FloorLayout
                 continue;
 
             int doorCount = CountBits((int)node.Doors);
-
-            if (doorCount == 1)
-                node.Type = RoomType.DeadEnd;
-            else if (doorCount == 2 && IsOppositePair(node.Doors))
-                node.Type = (rng.NextDouble() < 0.4) ? RoomType.Corridor : RoomType.Normal;
-            else
-                node.Type = RoomType.Normal;
+            node.Type = doorCount == 1 ? RoomType.DeadEnd : RoomType.Normal;
         }
     }
 
@@ -362,10 +361,6 @@ public static class FloorLayout
         while (mask != 0) { count += mask & 1; mask >>= 1; }
         return count;
     }
-
-    private static bool IsOppositePair(DoorDirection doors) =>
-        doors == (DoorDirection.North | DoorDirection.South) ||
-        doors == (DoorDirection.East | DoorDirection.West);
 
     private static Vector2Int FindRoomPosition(IReadOnlyList<Room> rooms, RoomType type)
     {

@@ -8,8 +8,7 @@ public enum RoomType
     Normal,
     Treasure,
     Boss,
-    DeadEnd,
-    Corridor
+    DeadEnd
 }
 
 [System.Flags]

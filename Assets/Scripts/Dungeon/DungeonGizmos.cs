@@ -57,7 +57,6 @@ public static class DungeonGizmos
         RoomType.Treasure   => Color.yellow,
         RoomType.Boss       => Color.red,
         RoomType.DeadEnd    => Color.magenta,
-        RoomType.Corridor   => new Color(0.5f, 0.5f, 0.8f),
         _                   => Color.white,
     };
 }
