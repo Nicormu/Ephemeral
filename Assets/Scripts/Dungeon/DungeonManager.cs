@@ -6,6 +6,26 @@ public class DungeonManager : MonoBehaviour
 {
     public static DungeonManager Instance { get; private set; }
 
+    /// <summary>Sorting Layer every dynamically Y-sorted entity (obstacles, player, enemies) must
+    /// use. Must exist in Edit > Project Settings > Tags and Layers > Sorting Layers — create it
+    /// there first (this can't be created from script). Kept as a single shared constant so
+    /// DungeonManager (obstacles) and YSortRenderer (player/enemies) can never drift out of sync.</summary>
+    public const string EntitySortingLayerName = "Entities";
+
+    // Base offset keeps every computed order comfortably positive/readable; precision controls
+    // how many distinct Order-in-Layer steps exist per world unit of Y. sortingOrder is a short
+    // (Unity clamps to roughly -32768..32767), so these two constants are chosen to stay well
+    // inside that range even for a dungeon that sprawls a few hundred tiles in any direction.
+    private const int YSortBase = 10000;
+    private const int YSortPrecision = 20;
+
+    /// <summary>Shared Y-sort formula: higher world Y -> lower Order in Layer (drawn further
+    /// back); lower world Y -> higher Order in Layer (drawn further forward, i.e. "closer to
+    /// camera" in a top-down room). Used both here (obstacles, computed once at spawn) and by
+    /// YSortRenderer (player/enemies, recomputed every frame since they move).</summary>
+    public static int CalculateYSortOrder(float worldY) =>
+        YSortBase - Mathf.RoundToInt(worldY * YSortPrecision);
+
     [Header("Generation")]
     public bool autoStart = true;
     public int overrideSeed = -1;
@@ -285,7 +305,13 @@ public class DungeonManager : MonoBehaviour
     /// GameObject (instead of a Tilemap tile) is what lets these obstacles participate in normal
     /// Transparency Sort Axis Y-sorting against the player and each other — Tilemap tiles can't
     /// reliably sort against each other once their sprites are taller than one cell and overlap
-    /// into neighboring cells.</summary>
+    /// into neighboring cells.
+    ///
+    /// SAFETY NET: forces Sorting Layer to EntitySortingLayerName and computes Order in Layer
+    /// directly from this cell's Y position (see CalculateYSortOrder), instead of trusting the
+    /// prefab's own Inspector values. This guarantees every obstacle sorts correctly against
+    /// every other obstacle regardless of what a given ObstacleType prefab happens to have set —
+    /// a single mismatched prefab can no longer silently break Y-sorting for the whole room.</summary>
     private void SpawnObstacleInstance(RoomCell cell)
     {
         GameObject prefabToUse = cell.ObstaclePrefab != null ? cell.ObstaclePrefab : fallbackObstaclePrefab;
@@ -306,6 +332,11 @@ public class DungeonManager : MonoBehaviour
             sr.sprite = cell.ObstacleSprite;
             if (cell.ObstacleSprite == null)
                 Debug.LogWarning($"[DungeonManager] Obstacle at ({cell.X},{cell.Y}) has no sprite — check that its ObstacleType has Sprite Variants assigned.");
+
+            // Force consistent Y-sort regardless of whatever this prefab's own SpriteRenderer
+            // Inspector values were — see method doc above.
+            sr.sortingLayerName = EntitySortingLayerName;
+            sr.sortingOrder = CalculateYSortOrder(pos.y);
         }
         else
         {

@@ -12,13 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ee41396dc32aee5794394aeec6167dd, type: 3}
   m_Name: Rock
   m_EditorClassIdentifier: Assembly-CSharp::ObstacleType
-  Tiles:
-  - {fileID: 11400000, guid: f00c21b54485f4097ba623e74ee56e52, type: 2}
-  - {fileID: 11400000, guid: 3362ae9b770938aa6a7a14c43547074f, type: 2}
-  - {fileID: 11400000, guid: 4ee18cfecda42d0538d3477eca5f32b2, type: 2}
-  - {fileID: 11400000, guid: 1029fa5b3f48c4dda9cfb99f054ca894, type: 2}
+  Prefab: {fileID: 4353008089203034237, guid: 4b92196fbf7e5795ab117206cf8f6e9c, type: 3}
+  SpriteVariants:
+  - {fileID: 3452003437791708593, guid: 6f18f196eb65cd094bdb07cdbe6a9cb5, type: 3}
+  - {fileID: 1289752942, guid: 6f18f196eb65cd094bdb07cdbe6a9cb5, type: 3}
+  - {fileID: -968219454, guid: 6f18f196eb65cd094bdb07cdbe6a9cb5, type: 3}
+  - {fileID: 1650513782, guid: 6f18f196eb65cd094bdb07cdbe6a9cb5, type: 3}
+  - {fileID: -2000379210, guid: 6f18f196eb65cd094bdb07cdbe6a9cb5, type: 3}
   BlocksMovement: 1
   Damage: 0
+  IgnoredByFlyingEntities: 0
   IsDestructible: 1
   MaxHealth: 1
   BreakEffectPrefab: {fileID: 0}

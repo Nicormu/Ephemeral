@@ -248,6 +248,14 @@ public static class FloorLayout
             );
 
             Room room = new Room(node.Type, tileOrigin, template.Width, template.Height, node.Doors);
+
+            // BUG FIX: this was previously never called, so every room silently kept the
+            // all-Floor Cells array the Room constructor defaults to — obstacle data resolved
+            // from the RoomTemplateSO (prefab, sprite variants, damage, destructible flags...)
+            // never made it into room.Cells, so DungeonManager.SpawnRoomFloor() never found a
+            // CellState.Obstacle cell to spawn a prefab for.
+            room.Cells = BuildAbsoluteCells(template.Cells, tileOrigin, rng);
+
             room.EnemySpawns = BuildAbsoluteEnemySpawns(template.EnemySpawns, tileOrigin);
             room.FloorTile = template.FloorTile;
             room.TopWallTile = template.TopWallTile;
@@ -264,12 +272,13 @@ public static class FloorLayout
     /// entry at random from its ObstacleType's variant pools — done here (once per physical room
     /// instance) rather than in RoomTemplateSO.GetOccupiedCells (once per template, cached in
     /// RoomPool), so two rooms that happen to reuse the same template don't always render the
-    /// exact same variant. obstaclePrefab is NOT randomized like the sprite — it's a single value
-    /// per ObstacleType, so it's just carried through unchanged from the local tuple.</summary>
+    /// exact same variant. obstaclePrefab and obstacleIgnoredByFlight are NOT randomized like the
+    /// sprite — they're single values per ObstacleType, so they're just carried through unchanged
+    /// from the local tuple.</summary>
     private static RoomCell[] BuildAbsoluteCells(
         (Vector2Int pos, CellState state, TileBase[] obstacleTileVariants, Sprite[] obstacleSpriteVariants,
             bool obstacleBlocksMovement, int obstacleDamage, bool obstacleIsDestructible, int obstacleMaxHealth,
-            GameObject obstacleBreakEffectPrefab, GameObject obstaclePrefab)[] localCells,
+            GameObject obstacleBreakEffectPrefab, GameObject obstaclePrefab, bool obstacleIgnoredByFlight)[] localCells,
         Vector2Int origin, System.Random rng)
     {
         var result = new RoomCell[localCells.Length];
@@ -296,7 +305,8 @@ public static class FloorLayout
                 local.obstacleMaxHealth,
                 local.obstacleBreakEffectPrefab,
                 resolvedSprite,
-                local.obstaclePrefab);
+                local.obstaclePrefab,
+                local.obstacleIgnoredByFlight);
         }
         return result;
     }
