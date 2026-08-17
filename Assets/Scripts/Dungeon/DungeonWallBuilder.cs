@@ -9,6 +9,12 @@ using UnityEngine.Tilemaps;
 /// left at each door so the player can walk through. Also tracks which side (North/South/East/
 /// West) painted each collision wall cell, so DungeonDecorationPainter can orient decorations
 /// per side. Corners are tracked separately and are never eligible for decoration.
+///
+/// IMPORTANT: a wall is only painted on a room's TRUE exterior edge — a neighbor cell that falls
+/// inside the room's own rectangular bounds (GridPos/Width/Height) but isn't in roomCells is an
+/// INTERNAL Void pit (RoomTemplateSO.GetOccupiedCells skips Void cells entirely, so they never
+/// make it into room.Cells/roomCells), not an exterior boundary — see IsWithinRoomBounds.
+/// Without this distinction, internal Void pits get walls painted around them by mistake.
 /// </summary>
 public class DungeonWallBuilder
 {
@@ -77,6 +83,13 @@ public class DungeonWallBuilder
 
                     if (roomCells.Contains(wallPos)) continue; // interior to this room
 
+                    // NEW: a neighbor cell that's still within this room's rectangular bounds but
+                    // isn't in roomCells is an internal Void pit (Void cells are skipped by
+                    // RoomTemplateSO.GetOccupiedCells and never added to room.Cells/roomCells) —
+                    // not a true exterior edge. Skip painting a wall there; only paint walls on
+                    // the room's real outer boundary.
+                    if (IsWithinRoomBounds(room, wallPos)) continue;
+
                     TileBase wallTile = dir switch
                     {
                         DoorDirection.North => room.TopWallTile,
@@ -141,6 +154,16 @@ public class DungeonWallBuilder
                 _wallCollisionTilemap.SetTransformMatrix(tilePos, FlipXMatrix);
             }
         }
+    }
+
+    /// <summary>True if pos falls within room's own rectangular footprint (GridPos to
+    /// GridPos+Width/Height, exclusive upper bound) — regardless of whether that cell is Floor,
+    /// Obstacle, or an internal Void pit. Used to tell "internal Void hole" apart from "true
+    /// exterior edge" when deciding whether a neighbor cell deserves a wall.</summary>
+    private static bool IsWithinRoomBounds(Room room, Vector2Int pos)
+    {
+        return pos.x >= room.GridPos.x && pos.x < room.GridPos.x + room.Width &&
+               pos.y >= room.GridPos.y && pos.y < room.GridPos.y + room.Height;
     }
 
     private static bool IsRoomDoorCell(Room room, Vector2Int wallPos, DoorDirection dir)

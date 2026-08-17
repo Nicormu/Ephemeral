@@ -37,7 +37,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 1
+    filterMode: 0
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -117,7 +117,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 128
+        y: 192
         width: 64
         height: 64
       alignment: 0
@@ -139,7 +139,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 64
-        y: 128
+        y: 192
         width: 64
         height: 64
       alignment: 0
@@ -150,7 +150,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: d27e5912c96985a659519e366b356eef
+      spriteID: 256d2f739275658f69dfe17d3d9e057e
       internalID: 1022746306
       vertices: []
       indices: 
@@ -161,6 +161,28 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 128
+        y: 192
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d23f1b64dcb041c0497b4cc2eeddabc4
+      internalID: -1455769566
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DefaultFloorTile_3
+      rect:
+        serializedVersion: 2
+        x: 0
         y: 128
         width: 64
         height: 64
@@ -172,29 +194,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 8cf64c07a3bf68ed28a1ae5fa6c9d593
-      internalID: -1455769566
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: DefaultFloorTile_3
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 64
-        width: 64
-        height: 64
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 6ae04ba61e77203898359962c7522f3f
+      spriteID: fc76b558ace5db92eb63ec0246ac10ab
       internalID: -563294786
       vertices: []
       indices: 
@@ -205,6 +205,50 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 64
+        y: 128
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4f7aa34e7bef2b729b34c9674e5fa72c
+      internalID: -1725070589
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DefaultFloorTile_5
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 128
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 85fee43f0c0f9b34582fca7d148ec62c
+      internalID: 294853763
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DefaultFloorTile_6
+      rect:
+        serializedVersion: 2
+        x: 0
         y: 64
         width: 64
         height: 64
@@ -216,14 +260,36 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: a94c9f93b3104d9a39e09354d0a12872
-      internalID: -1725070589
+      spriteID: b7becd6409c2f6ac287d7ea7f761c6fd
+      internalID: -606658335
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_5
+      name: DefaultFloorTile_7
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 64
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ad9ba4e7f2112fdc4949de98874bd863
+      internalID: 951070906
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DefaultFloorTile_8
       rect:
         serializedVersion: 2
         x: 128
@@ -238,14 +304,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 377d8a0d489cc79dead08b456c72dd36
-      internalID: 294853763
+      spriteID: a1f522d18fe440048993aa5a1a77fdef
+      internalID: 999177967
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_6
+      name: DefaultFloorTile_9
       rect:
         serializedVersion: 2
         x: 0
@@ -260,14 +326,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 1877855f740b75ace95021e5d4afb74d
-      internalID: -606658335
+      spriteID: fed3a01f8bedb139ab75d8765164ae26
+      internalID: 1216091434
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_7
+      name: DefaultFloorTile_10
       rect:
         serializedVersion: 2
         x: 64
@@ -282,14 +348,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: c3b79a2e6aa3b059ca5edfb5c05df505
-      internalID: 951070906
+      spriteID: 2eaefa2c1120c0f8d80a53280f48fd2b
+      internalID: -496444804
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: DefaultFloorTile_8
+      name: DefaultFloorTile_11
       rect:
         serializedVersion: 2
         x: 128
@@ -304,8 +370,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 0a43689fc3ff49537aca0f1802ef9af2
-      internalID: 999177967
+      spriteID: 3b09a9f0bd70960e394e17fc94107c18
+      internalID: -1449952379
       vertices: []
       indices: 
       edges: []
@@ -328,6 +394,8 @@ TextureImporter:
     nameFileIdTable:
       DefaultFloorTile_0: 5048880145460850602
       DefaultFloorTile_1: 1022746306
+      DefaultFloorTile_10: -496444804
+      DefaultFloorTile_11: -1449952379
       DefaultFloorTile_2: -1455769566
       DefaultFloorTile_3: -563294786
       DefaultFloorTile_4: -1725070589

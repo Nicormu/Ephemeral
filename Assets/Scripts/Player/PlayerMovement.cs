@@ -129,9 +129,18 @@ public class PlayerMovement : MonoBehaviour
 
     #endregion
 
-    private void OnDisable()
+    /// <summary>
+    /// Singleton cleanup now lives here instead of OnDisable(). Disabling this component
+    /// (e.g. PlayerHazardDetector locking movement during void recovery, or any future system
+    /// that toggles 'enabled') must NOT null out Instance — every other system that reads
+    /// PlayerMovement.Instance (PlayerAnimator, RoomCamera, enemies, DungeonPlayerSpawner...)
+    /// would otherwise silently stop working the moment this component is next disabled, with
+    /// no re-registration path since only Awake() (not OnEnable()) sets Instance. OnDestroy()
+    /// is the correct place: it only fires on actual destruction (scene unload, GameObject
+    /// destroyed), which is the only time the reference should actually go away.
+    /// </summary>
+    private void OnDestroy()
     {
-        // Clean up singleton reference so stale references don't survive scene reloads.
         if (Instance == this) Instance = null;
     }
 
@@ -193,15 +202,21 @@ public class PlayerMovement : MonoBehaviour
     /// <summary>
     /// Enables/disables player input control. Used by external systems that need to drive the
     /// player's transform directly for a moment — e.g. RoomCamera's door-crossing transition,
-    /// which glides the player across the gap between rooms while the camera pans. Disabling
-    /// stops both FixedUpdate movement and Update's facing-direction tracking (component is
-    /// simply turned off), and zeroes residual velocity so the player doesn't drift once control
-    /// is handed back.
+    /// which glides the player across the gap between rooms while the camera pans, and
+    /// PlayerHazardDetector's void-fall recovery. Disabling stops HandleMovement from reading
+    /// real input (it still runs every FixedUpdate, but drives the player into Idle with zero
+    /// velocity instead of freezing whatever state was active when input was cut — this is what
+    /// keeps PlayerAnimator's IsMoving/Facing parameters updating correctly during a lock instead
+    /// of freezing on the last animation frame), and zeroes residual velocity so the player
+    /// doesn't drift once control is handed back.
     ///
     /// Also suspends the player's own Collider2D while disabled: during an externally-driven
-    /// glide the destination is already a known-safe position, so physics shouldn't be able to
-    /// snag the player on a closed/misaligned door collider (or anything else) along the way.
-    /// Re-enabled the instant control is handed back.
+    /// glide or a hazard-recovery teleport, the destination is already a known-safe position, so
+    /// physics shouldn't be able to snag the player on a closed/misaligned door collider (or
+    /// anything else) along the way. Re-enabled the instant control is handed back.
+    ///
+    /// Deliberately does NOT touch 'enabled' on this component — see OnDestroy() for why that
+    /// distinction matters for the Instance singleton.
     /// </summary>
     public void SetInputEnabled(bool value)
     {

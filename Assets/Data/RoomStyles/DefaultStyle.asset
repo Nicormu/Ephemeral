@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: DefaultStyle
   m_EditorClassIdentifier: Assembly-CSharp::RoomStyleSO
   FloorTile: {fileID: 11400000, guid: c03304d8f5ba6c253ab1c054cf36eec2, type: 2}
+  FloorTileVariants: []
   TopWallTile: {fileID: 11400000, guid: c1bd3c0022357bdb0ac7277e36747751, type: 2}
   BottomWallTile: {fileID: 11400000, guid: 4d6e3e6215f4d0e6fa655f78996245d6, type: 2}
   SideWallTile: {fileID: 11400000, guid: 0f806f9857d1b395c9f37fe66bcee4c0, type: 2}
-  VoidTile: {fileID: 0}
+  VoidTile: {fileID: 11400000, guid: eeeb4265978c94177a6ba42b11010093, type: 2}
