@@ -3,18 +3,24 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Derives and paints every wall tile from room adjacency — never hand-placed. Paints two
-/// parallel tilemaps: a VISIBLE one that stays continuous even across door gaps (so Rule Tiles
-/// never render a false corner next to a door), and an INVISIBLE collision one with a real gap
-/// left at each door so the player can walk through. Also tracks which side (North/South/East/
-/// West) painted each collision wall cell, so DungeonDecorationPainter can orient decorations
-/// per side. Corners are tracked separately and are never eligible for decoration.
+/// Derives and paints every wall tile from each room's own rectangular bounds — never hand-placed,
+/// and NOT derived from which interior cells happen to be Floor/Obstacle/Void. Paints two parallel
+/// tilemaps: a VISIBLE one that stays continuous even across door gaps (so Rule Tiles never render
+/// a false corner next to a door), and an INVISIBLE collision one with a real gap left at each door
+/// so the player can walk through. Also tracks which side (North/South/East/West) painted each
+/// collision wall cell, so DungeonDecorationPainter can orient decorations per side. Corners are
+/// tracked separately and are never eligible for decoration.
 ///
-/// IMPORTANT: a wall is only painted on a room's TRUE exterior edge — a neighbor cell that falls
-/// inside the room's own rectangular bounds (GridPos/Width/Height) but isn't in roomCells is an
-/// INTERNAL Void pit (RoomTemplateSO.GetOccupiedCells skips Void cells entirely, so they never
-/// make it into room.Cells/roomCells), not an exterior boundary — see IsWithinRoomBounds.
-/// Without this distinction, internal Void pits get walls painted around them by mistake.
+/// IMPORTANT (fixed): walls used to be derived by looking outward from each Floor/Obstacle cell in
+/// room.Cells. Since RoomTemplateSO.GetOccupiedCells skips Void cells entirely, a Void cell placed
+/// in a room template's OUTER ring (the row/column directly touching the exterior wall) meant no
+/// Floor cell ever existed there to request a wall tile — leaving a literal hole in the boundary
+/// wall exactly where that pit touched the edge, with the pit's darkness visually "leaking" through
+/// it. Walls are now painted by walking each side of the room's rectangle directly (GridPos to
+/// GridPos+Width/Height), so the exterior is always fully enclosed no matter what's inside — Void
+/// pits, obstacles, or Floor. This also means internal Void pits (fully inside the room bounds)
+/// never get walls painted around them, with no special-casing needed — they're just never visited
+/// by this perimeter walk in the first place.
 /// </summary>
 public class DungeonWallBuilder
 {
@@ -69,70 +75,8 @@ public class DungeonWallBuilder
 
         foreach (var room in rooms)
         {
-            var roomCells = new HashSet<Vector2Int>();
-            foreach (var cell in room.Cells)
-                roomCells.Add(cell.CellPos);
-
-            foreach (var cell in room.Cells)
-            {
-                Vector2Int cellPos = cell.CellPos;
-
-                foreach (var dir in AllDirections)
-                {
-                    Vector2Int wallPos = cellPos + DungeonGeometry.UnitOffset(dir);
-
-                    if (roomCells.Contains(wallPos)) continue; // interior to this room
-
-                    // NEW: a neighbor cell that's still within this room's rectangular bounds but
-                    // isn't in roomCells is an internal Void pit (Void cells are skipped by
-                    // RoomTemplateSO.GetOccupiedCells and never added to room.Cells/roomCells) —
-                    // not a true exterior edge. Skip painting a wall there; only paint walls on
-                    // the room's real outer boundary.
-                    if (IsWithinRoomBounds(room, wallPos)) continue;
-
-                    TileBase wallTile = dir switch
-                    {
-                        DoorDirection.North => room.TopWallTile,
-                        DoorDirection.South => room.BottomWallTile,
-                        DoorDirection.East  => room.SideWallTile,
-                        DoorDirection.West  => room.SideWallTile,
-                        _ => null
-                    };
-                    if (wallTile == null) continue;
-
-                    bool isDoorCell = IsRoomDoorCell(room, wallPos, dir);
-
-                    if (WallVisualPositions.Add(wallPos))
-                    {
-                        var tilePos = new Vector3Int(wallPos.x, wallPos.y, 0);
-                        _wallTilemap.SetTile(tilePos, wallTile);
-
-                        if (dir == DoorDirection.East)
-                            eastFlipVisualPositions.Add(wallPos);
-                    }
-
-                    if (!isDoorCell)
-                    {
-                        WallPositions[wallPos] = dir;
-
-                        if (_wallCollisionTilemap != null)
-                        {
-                            var tilePos = new Vector3Int(wallPos.x, wallPos.y, 0);
-                            _wallCollisionTilemap.SetTile(tilePos, wallTile);
-
-                            if (dir == DoorDirection.East)
-                                eastFlipCollisionPositions.Add(wallPos);
-                        }
-                    }
-
-                    if (dir == DoorDirection.North && room.WallTopTile != null)
-                    {
-                        Vector2Int capPos = wallPos + DungeonGeometry.UnitOffset(DoorDirection.North);
-                        if (paintedTop.Add(capPos))
-                            _wallTilemap.SetTile(new Vector3Int(capPos.x, capPos.y, 0), room.WallTopTile);
-                    }
-                }
-            }
+            foreach (var side in AllDirections)
+                PaintWallRun(room, side, paintedTop, eastFlipVisualPositions, eastFlipCollisionPositions);
 
             PaintNorthWallCorners(room);
             PaintSouthWallCorners(room);
@@ -156,14 +100,93 @@ public class DungeonWallBuilder
         }
     }
 
-    /// <summary>True if pos falls within room's own rectangular footprint (GridPos to
-    /// GridPos+Width/Height, exclusive upper bound) — regardless of whether that cell is Floor,
-    /// Obstacle, or an internal Void pit. Used to tell "internal Void hole" apart from "true
-    /// exterior edge" when deciding whether a neighbor cell deserves a wall.</summary>
-    private static bool IsWithinRoomBounds(Room room, Vector2Int pos)
+    /// <summary>Paints every wall cell along ONE side of a room's rectangle — walked directly from
+    /// GridPos/Width/Height, deliberately ignoring whatever CellState (Floor/Obstacle/Void) sits
+    /// just inside that boundary. This is what guarantees the room is always fully enclosed.</summary>
+    private void PaintWallRun(Room room, DoorDirection side, HashSet<Vector2Int> paintedTop,
+        HashSet<Vector2Int> eastFlipVisualPositions, HashSet<Vector2Int> eastFlipCollisionPositions)
     {
-        return pos.x >= room.GridPos.x && pos.x < room.GridPos.x + room.Width &&
-               pos.y >= room.GridPos.y && pos.y < room.GridPos.y + room.Height;
+        TileBase wallTile = side switch
+        {
+            DoorDirection.North => room.TopWallTile,
+            DoorDirection.South => room.BottomWallTile,
+            DoorDirection.East  => room.SideWallTile,
+            DoorDirection.West  => room.SideWallTile,
+            _ => null
+        };
+        if (wallTile == null) return;
+
+        foreach (Vector2Int wallPos in GetSidePositions(room, side))
+        {
+            bool isDoorCell = IsRoomDoorCell(room, wallPos, side);
+
+            if (WallVisualPositions.Add(wallPos))
+            {
+                var tilePos = new Vector3Int(wallPos.x, wallPos.y, 0);
+                _wallTilemap.SetTile(tilePos, wallTile);
+
+                if (side == DoorDirection.East)
+                    eastFlipVisualPositions.Add(wallPos);
+            }
+
+            if (!isDoorCell)
+            {
+                WallPositions[wallPos] = side;
+
+                if (_wallCollisionTilemap != null)
+                {
+                    var tilePos = new Vector3Int(wallPos.x, wallPos.y, 0);
+                    _wallCollisionTilemap.SetTile(tilePos, wallTile);
+
+                    if (side == DoorDirection.East)
+                        eastFlipCollisionPositions.Add(wallPos);
+                }
+            }
+
+            if (side == DoorDirection.North && room.WallTopTile != null)
+            {
+                Vector2Int capPos = wallPos + DungeonGeometry.UnitOffset(DoorDirection.North);
+                if (paintedTop.Add(capPos))
+                    _wallTilemap.SetTile(new Vector3Int(capPos.x, capPos.y, 0), room.WallTopTile);
+            }
+        }
+    }
+
+    /// <summary>The run of exterior wall cell positions along one side of a room's rectangle,
+    /// excluding corners (corners are handled separately by PaintNorthWallCorners/PaintSouthWallCorners).</summary>
+    private static IEnumerable<Vector2Int> GetSidePositions(Room room, DoorDirection side)
+    {
+        switch (side)
+        {
+            case DoorDirection.North:
+            {
+                int y = room.GridPos.y + room.Height;
+                for (int x = room.GridPos.x; x < room.GridPos.x + room.Width; x++)
+                    yield return new Vector2Int(x, y);
+                break;
+            }
+            case DoorDirection.South:
+            {
+                int y = room.GridPos.y - 1;
+                for (int x = room.GridPos.x; x < room.GridPos.x + room.Width; x++)
+                    yield return new Vector2Int(x, y);
+                break;
+            }
+            case DoorDirection.East:
+            {
+                int x = room.GridPos.x + room.Width;
+                for (int y = room.GridPos.y; y < room.GridPos.y + room.Height; y++)
+                    yield return new Vector2Int(x, y);
+                break;
+            }
+            case DoorDirection.West:
+            {
+                int x = room.GridPos.x - 1;
+                for (int y = room.GridPos.y; y < room.GridPos.y + room.Height; y++)
+                    yield return new Vector2Int(x, y);
+                break;
+            }
+        }
     }
 
     private static bool IsRoomDoorCell(Room room, Vector2Int wallPos, DoorDirection dir)
