@@ -1,9 +1,12 @@
 using UnityEngine;
 
 /// <summary>
-/// A door sits on a room's own exterior edge. It stays closed while either connected room isn't
-/// cleared, and opens the moment both are cleared — a room with no enemies counts as cleared
-/// immediately.
+/// A door sits on a room's own exterior edge. It stays OPEN by default — including while a
+/// connected room has active enemies, as long as the player hasn't actually entered that room
+/// yet — and locks CLOSED only once the player is standing inside a room that has active enemies
+/// (RoomController.ShouldLockDoors), reopening the moment that room reports cleared. This is
+/// what lets the player freely walk INTO a room full of enemies, then traps them there Isaac-
+/// style until it's cleared, instead of the doorway itself being blocked before they ever arrive.
 ///
 /// Since rooms are separated by a gap (see DungeonGridConstants.RoomGap), each connection
 /// between two rooms is now made of TWO independent Door instances — one per room, each on its
@@ -60,7 +63,7 @@ public class Door : MonoBehaviour
         if (_roomA == null) _roomA = room;
         else if (_roomB == null) _roomB = room;
 
-        room.OnCleared += Reevaluate;
+        room.OnLockStateChanged += Reevaluate;
         Reevaluate();
     }
 
@@ -78,12 +81,15 @@ public class Door : MonoBehaviour
             _entryTrigger.gameObject.SetActive(false);
     }
 
+    /// <summary>A door locks the instant EITHER connected room wants to lock (the player is
+    /// standing inside it with active enemies) — a room with no controller registered (e.g. an
+    /// unresolved neighbor) never blocks, same as the old null-check behavior.</summary>
     private void Reevaluate()
     {
-        bool aCleared = _roomA == null || _roomA.IsCleared;
-        bool bCleared = _roomB == null || _roomB.IsCleared;
+        bool aBlocks = _roomA != null && _roomA.ShouldLockDoors;
+        bool bBlocks = _roomB != null && _roomB.ShouldLockDoors;
 
-        if (aCleared && bCleared) Open();
+        if (!aBlocks && !bBlocks) Open();
         else Close();
     }
 
@@ -151,7 +157,7 @@ public class Door : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (_roomA != null) _roomA.OnCleared -= Reevaluate;
-        if (_roomB != null) _roomB.OnCleared -= Reevaluate;
+        if (_roomA != null) _roomA.OnLockStateChanged -= Reevaluate;
+        if (_roomB != null) _roomB.OnLockStateChanged -= Reevaluate;
     }
 }
