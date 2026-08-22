@@ -6,6 +6,7 @@ using UnityEngine;
 /// live forever).
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(SpriteRenderer))]
 public class Projectile : MonoBehaviour
 {
     [SerializeField] private float _speed = 5f;
@@ -13,11 +14,26 @@ public class Projectile : MonoBehaviour
     [SerializeField] private float _lifetime = 4f;
 
     private Rigidbody2D _rb;
+    private SpriteRenderer _sr;
 
     private void Awake()
     {
         _rb = GetComponent<Rigidbody2D>();
+        _sr = GetComponent<SpriteRenderer>();
+
+        // Same safety net DungeonManager uses for obstacles — force this onto the shared
+        // "Entities" sorting layer so it can never render behind the floor tilemap regardless
+        // of what the prefab's own Inspector value happens to be.
+        _sr.sortingLayerName = DungeonManager.EntitySortingLayerName;
+
         Destroy(gameObject, _lifetime);
+    }
+
+    private void LateUpdate()
+    {
+        // Recompute every frame — same formula YSortRenderer uses for the player/enemies —
+        // since a projectile crosses in front of / behind obstacles as it travels.
+        _sr.sortingOrder = DungeonManager.CalculateYSortOrder(transform.position.y);
     }
 
     public void Launch(Vector2 direction)

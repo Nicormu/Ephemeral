@@ -4,7 +4,8 @@ using UnityEngine;
 /// <summary>
 /// Gameplay-facing read API over the generated dungeon: what's at a given grid cell, hazard
 /// damage lookups, and "find me a safe floor tile" queries. Built once per generation by
-/// DungeonManager (see Build()) and consumed by PlayerHazardDetector, RoomCamera, etc.
+/// DungeonManager (see Build()) and consumed by PlayerHazardDetector, EnemyHazardDetector,
+/// RoomCamera, etc.
 /// </summary>
 public class DungeonCellQuery
 {
@@ -13,6 +14,7 @@ public class DungeonCellQuery
 
     private Dictionary<Vector2Int, CellState> _cellLookup;
     private Dictionary<Vector2Int, int> _obstacleHazardDamage;
+    private Dictionary<Vector2Int, bool> _obstacleIgnoredByFlight;
     private List<Room> _rooms;
     private HashSet<Vector2Int> _doorCorridorCells;
 
@@ -31,6 +33,7 @@ public class DungeonCellQuery
         _rooms = rooms;
         _cellLookup = new Dictionary<Vector2Int, CellState>();
         _obstacleHazardDamage = new Dictionary<Vector2Int, int>();
+        _obstacleIgnoredByFlight = new Dictionary<Vector2Int, bool>();
         _doorCorridorCells = new HashSet<Vector2Int>();
 
         foreach (var room in rooms)
@@ -40,7 +43,10 @@ public class DungeonCellQuery
                 _cellLookup[cell.CellPos] = cell.State;
 
                 if (cell.State == CellState.Obstacle && !cell.ObstacleBlocksMovement && cell.ObstacleDamage > 0)
+                {
                     _obstacleHazardDamage[cell.CellPos] = cell.ObstacleDamage;
+                    _obstacleIgnoredByFlight[cell.CellPos] = cell.ObstacleIgnoredByFlight;
+                }
             }
 
             // The gap between two connected rooms (DungeonGridConstants.RoomGap tiles wide) sits
@@ -85,6 +91,13 @@ public class DungeonCellQuery
     public int GetObstacleHazardDamage(Vector2Int gridCell) =>
         _obstacleHazardDamage != null && _obstacleHazardDamage.TryGetValue(gridCell, out var dmg) ? dmg : 0;
 
+    /// <summary>Whether a flying entity (FlightComponent.IsFlying == true) is immune to this
+    /// cell's hazard damage — sourced from that cell's ObstacleType.IgnoredByFlyingEntities.
+    /// Only meaningful for cells that actually have hazard damage (check GetObstacleHazardDamage
+    /// first); defaults to false (hazard still affects fliers, e.g. Fire) for anything else.</summary>
+    public bool GetObstacleIgnoredByFlight(Vector2Int gridCell) =>
+        _obstacleIgnoredByFlight != null && _obstacleIgnoredByFlight.TryGetValue(gridCell, out var ignored) && ignored;
+
     /// <summary>Marks a cell as Floor at runtime and clears any hazard-damage entry it had.
     /// Called when a DestructibleObstacle breaks, so pathing/hazard checks immediately treat
     /// its cell as walkable instead of waiting for the next full dungeon generation.</summary>
@@ -93,6 +106,7 @@ public class DungeonCellQuery
         if (_cellLookup == null) return;
         _cellLookup[gridCell] = CellState.Floor;
         _obstacleHazardDamage?.Remove(gridCell);
+        _obstacleIgnoredByFlight?.Remove(gridCell);
     }
 
     /// <summary>

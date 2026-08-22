@@ -205,6 +205,12 @@ public class DungeonManager : MonoBehaviour
     // — Gameplay cell lookup (delegated to DungeonCellQuery) —
     public CellState GetCellState(Vector2Int gridCell) => _cellQuery.GetCellState(gridCell);
     public int GetObstacleHazardDamage(Vector2Int gridCell) => _cellQuery.GetObstacleHazardDamage(gridCell);
+
+    /// <summary>Whether a flying entity is immune to a given hazard cell's damage — sourced from
+    /// that cell's ObstacleType.IgnoredByFlyingEntities. Used by EnemyHazardDetector (and could
+    /// be used by a future flying-player mechanic) alongside GetObstacleHazardDamage.</summary>
+    public bool GetObstacleIgnoredByFlight(Vector2Int gridCell) => _cellQuery.GetObstacleIgnoredByFlight(gridCell);
+
     public Vector3? FindNearestSafePositionInRoom(Vector3 worldPos) => _cellQuery.FindNearestSafePositionInRoom(worldPos);
     public bool IsInsideDungeon(Vector3 worldPos) => _cellQuery.IsInsideDungeon(worldPos);
     public Room? GetRoomAtGrid(Vector2Int gridPos) => _cellQuery.GetRoomAtGrid(gridPos);
@@ -313,7 +319,13 @@ public class DungeonManager : MonoBehaviour
     /// directly from this cell's Y position (see CalculateYSortOrder), instead of trusting the
     /// prefab's own Inspector values. This guarantees every obstacle sorts correctly against
     /// every other obstacle regardless of what a given ObstacleType prefab happens to have set —
-    /// a single mismatched prefab can no longer silently break Y-sorting for the whole room.</summary>
+    /// a single mismatched prefab can no longer silently break Y-sorting for the whole room.
+    ///
+    /// NOTE: this does NOT set the instance's Physics2D Layer — that still comes straight from
+    /// whatever Layer is baked into the prefab. For flying enemies to pass through obstacles
+    /// (see FlightComponent / EnemyHazardDetector), every obstacle prefab's Layer must be set to
+    /// "Obstacle" by hand in its own prefab asset, with that layer's collision against
+    /// "FlyingEntity" disabled in Project Settings > Physics 2D.</summary>
     private void SpawnObstacleInstance(RoomCell cell)
     {
         GameObject prefabToUse = cell.ObstaclePrefab != null ? cell.ObstaclePrefab : fallbackObstaclePrefab;

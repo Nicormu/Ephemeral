@@ -108,7 +108,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 1
+    textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -150,7 +150,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 128
+        y: 256
         width: 64
         height: 64
       alignment: 0
@@ -172,7 +172,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 64
-        y: 128
+        y: 256
         width: 64
         height: 64
       alignment: 0
@@ -194,7 +194,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 128
-        y: 128
+        y: 256
         width: 64
         height: 64
       alignment: 0
@@ -215,8 +215,8 @@ TextureImporter:
       name: Bat_3
       rect:
         serializedVersion: 2
-        x: 192
-        y: 128
+        x: 0
+        y: 192
         width: 64
         height: 64
       alignment: 0
@@ -237,8 +237,8 @@ TextureImporter:
       name: Bat_4
       rect:
         serializedVersion: 2
-        x: 0
-        y: 64
+        x: 64
+        y: 192
         width: 64
         height: 64
       alignment: 0
@@ -259,8 +259,8 @@ TextureImporter:
       name: Bat_5
       rect:
         serializedVersion: 2
-        x: 64
-        y: 64
+        x: 128
+        y: 192
         width: 64
         height: 64
       alignment: 0
@@ -281,8 +281,8 @@ TextureImporter:
       name: Bat_6
       rect:
         serializedVersion: 2
-        x: 128
-        y: 64
+        x: 0
+        y: 128
         width: 64
         height: 64
       alignment: 0
@@ -303,8 +303,8 @@ TextureImporter:
       name: Bat_7
       rect:
         serializedVersion: 2
-        x: 192
-        y: 64
+        x: 64
+        y: 128
         width: 64
         height: 64
       alignment: 0
@@ -325,8 +325,8 @@ TextureImporter:
       name: Bat_8
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
+        x: 128
+        y: 128
         width: 64
         height: 64
       alignment: 0
@@ -347,6 +347,94 @@ TextureImporter:
       name: Bat_9
       rect:
         serializedVersion: 2
+        x: 0
+        y: 64
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ab7920999c681c72f9b5b40be7b9ca3f
+      internalID: -1237669218
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bat_10
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 64
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6fd7e9e722b424556b3793fb48879d82
+      internalID: 1902310614
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bat_11
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 64
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4a1c525a9759972e388efa69a8fb1557
+      internalID: -1455339960
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bat_12
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 56872feff98ee00dda9ec0939aca951c
+      internalID: -536521690
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bat_13
+      rect:
+        serializedVersion: 2
         x: 64
         y: 0
         width: 64
@@ -357,16 +445,16 @@ TextureImporter:
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: ba28bd7f3e62ec2e0800000000000000
-      internalID: -2103701215377653077
+      spriteID: 7b5d50ca8ba98eb09a955f55a5b85c95
+      internalID: -618998340
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Bat_10
+      name: Bat_14
       rect:
         serializedVersion: 2
         x: 128
@@ -379,32 +467,10 @@ TextureImporter:
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 1e83adb129ab40180800000000000000
-      internalID: -9149983406214727455
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Bat_11
-      rect:
-        serializedVersion: 2
-        x: 192
-        y: 0
-        width: 64
-        height: 64
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: b2fcf56ea71df6a70800000000000000
-      internalID: 8822500520823344939
+      spriteID: 8b54febd7293d949c820a5b666bc0be1
+      internalID: 956864149
       vertices: []
       indices: 
       edges: []
@@ -427,8 +493,11 @@ TextureImporter:
     nameFileIdTable:
       Bat_0: 8647823593821616703
       Bat_1: 5681806813702538305
-      Bat_10: -9149983406214727455
-      Bat_11: 8822500520823344939
+      Bat_10: 1902310614
+      Bat_11: -1455339960
+      Bat_12: -536521690
+      Bat_13: -618998340
+      Bat_14: 956864149
       Bat_2: 697682191857345388
       Bat_3: 6993031405965254486
       Bat_4: -8835117555573905559
@@ -436,7 +505,7 @@ TextureImporter:
       Bat_6: -1085711696175172977
       Bat_7: -650004520372281371
       Bat_8: 5596611908343470214
-      Bat_9: -2103701215377653077
+      Bat_9: -1237669218
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

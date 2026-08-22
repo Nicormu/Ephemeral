@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -29,11 +30,14 @@ public class RoomTemplateSOEditor : Editor
         }
         else
         {
-            EditorGUILayout.LabelField("Click a Floor cell to add/remove an enemy spawn point.", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField("Click a Floor cell to add/remove an enemy spawn point. Click a Void cell to add/remove a FLYING-only spawn point (blue).", EditorStyles.miniLabel);
         }
 
         EditorGUILayout.Space();
         DrawGrid(template);
+
+        if (_paintMode == PaintMode.EnemySpawnPoints)
+            DrawVoidSpawnPointWarnings(template);
     }
 
     private void DrawObstaclePalette(RoomTemplateSO template)
@@ -75,9 +79,10 @@ public class RoomTemplateSOEditor : Editor
                 CellState current = template.GetCell(x, y);
                 var pos = new Vector2Int(x, y);
                 bool isSpawnPoint = template.EnemySpawnPoints.Contains(pos);
+                bool isVoidSpawn = isSpawnPoint && current == CellState.Void;
 
                 GUI.backgroundColor = (_paintMode == PaintMode.EnemySpawnPoints && isSpawnPoint)
-                    ? Color.red
+                    ? (isVoidSpawn ? new Color(0.25f, 0.55f, 0.95f) : Color.red) // blue = void/flying-only, red = floor
                     : ColorForState(template, x, y, current);
 
                 string label = "";
@@ -125,11 +130,15 @@ public class RoomTemplateSOEditor : Editor
         }
     }
 
+    /// <summary>Spawn points are now allowed on Floor OR Void cells — Void ones are meant for
+    /// flying enemies (see DrawVoidSpawnPointWarnings, which flags a Void spawn point whose
+    /// assigned prefab has no FlightComponent). Obstacle cells are still rejected — a spawn point
+    /// there would either not fit or immediately conflict with the obstacle's own collider.</summary>
     private void HandleSpawnPointClick(RoomTemplateSO template, int x, int y, CellState current)
     {
-        if (current != CellState.Floor)
+        if (current == CellState.Obstacle)
         {
-            Debug.LogWarning("[RoomTemplateSOEditor] Enemy spawn points can only be placed on Floor cells.");
+            Debug.LogWarning("[RoomTemplateSOEditor] Enemy spawn points can't be placed on Obstacle cells.");
             return;
         }
 
@@ -152,6 +161,47 @@ public class RoomTemplateSOEditor : Editor
         {
             if (entry.SpawnPointIndex == index) entry.SpawnPointIndex = -1;
             else if (entry.SpawnPointIndex > index) entry.SpawnPointIndex--;
+        }
+    }
+
+    /// <summary>Warns (doesn't block) when a Void spawn point's assigned enemy prefab has no
+    /// FlightComponent — that enemy would spawn floating over the pit with no fall/hazard
+    /// handling (EnemyHazardDetector for flight-aware hazard damage is still on the roadmap).
+    /// Purely informational — you can still assign a grounded prefab there if you want.</summary>
+    private void DrawVoidSpawnPointWarnings(RoomTemplateSO template)
+    {
+        var voidIndices = new List<int>();
+        for (int i = 0; i < template.EnemySpawnPoints.Count; i++)
+        {
+            var pos = template.EnemySpawnPoints[i];
+            if (template.GetCell(pos.x, pos.y) == CellState.Void)
+                voidIndices.Add(i);
+        }
+
+        if (voidIndices.Count == 0) return;
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Void Spawn Point Checks", EditorStyles.boldLabel);
+
+        foreach (int index in voidIndices)
+        {
+            var entry = template.EnemySpawnEntries.FirstOrDefault(e => e.SpawnPointIndex == index);
+
+            if (entry == null || entry.EnemyPrefab == null)
+            {
+                EditorGUILayout.HelpBox($"Spawn point {index} sits on a Void cell but has no enemy assigned yet in 'Enemy Spawn Entries' above.", MessageType.Info);
+                continue;
+            }
+
+            bool canFly = entry.EnemyPrefab.GetComponent<FlightComponent>() != null;
+            if (!canFly)
+            {
+                EditorGUILayout.HelpBox(
+                    $"Spawn point {index} (Void cell) uses '{entry.EnemyPrefab.name}', which has no FlightComponent. " +
+                    "It'll spawn floating over the pit with no fall handling. Add a FlightComponent (Starts Flying = true) " +
+                    "to the prefab, or move this spawn point to a Floor cell.",
+                    MessageType.Warning);
+            }
         }
     }
 

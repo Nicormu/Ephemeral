@@ -30,5 +30,11 @@ public class EnemyHealth : MonoBehaviour
         _health.OnDied -= DestroySelf; // avoid dangling reference
     }
 
+    /// <summary>Apply damage through the underlying HealthComponent. Added for
+    /// EnemyHazardDetector (Void/hazard damage) — any future weapon/projectile system that
+    /// damages enemies should call this same entry point instead of reaching into
+    /// HealthComponent directly, so invulnerability/death logic stays centralized.</summary>
+    public void TakeDamage(int amount) => _health.TakeDamage(amount);
+
     private void DestroySelf() => Destroy(gameObject);
 }
