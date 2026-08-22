@@ -16,6 +16,12 @@ using UnityEngine;
 /// never wired up, a fallback timer (_deathFallbackDuration) fires OnDeathAnimationFinished
 /// anyway, so EnemyHealth is never left waiting forever for a GameObject that should already be
 /// destroyed.
+///
+/// ATTACK RELEASE TIMING: same pattern as death. OnAttackAnimationComplete() is meant to be
+/// hooked up as an Animation Event on the Attack clip's "release" frame (the frame the shot
+/// should actually leave). If no Animator is assigned, or that event is never wired up, a
+/// fallback timer (_attackReleaseFallbackDuration) fires OnAttackReleased anyway, so
+/// EnemyRangedAttack is never left waiting forever for a projectile that should've launched.
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class EnemyAnimator : MonoBehaviour
@@ -32,6 +38,10 @@ public class EnemyAnimator : MonoBehaviour
     [Tooltip("Safety net only — used if no Animator is assigned, or the Death clip's Animation Event never calls OnDeathAnimationComplete().")]
     [SerializeField] private float _deathFallbackDuration = 1f;
 
+    [Header("Attack")]
+    [Tooltip("Safety net only — used if no Animator is assigned, or the Attack clip's Animation Event never calls OnAttackAnimationComplete(). Should be set a little longer than the Attack clip's actual release frame so the real event normally wins.")]
+    [SerializeField] private float _attackReleaseFallbackDuration = 0.5f;
+
     private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
     private static readonly int AttackHash = Animator.StringToHash("Attack");
     private static readonly int DieHash = Animator.StringToHash("Die");
@@ -45,6 +55,11 @@ public class EnemyAnimator : MonoBehaviour
     /// Animation Event (OnDeathAnimationComplete) or the fallback timer. EnemyHealth subscribes
     /// to know when it's safe to Destroy() the GameObject.</summary>
     public event Action OnDeathAnimationFinished;
+
+    /// <summary>Fired once per attack when the Attack animation's release point is reached —
+    /// either via the Animation Event (OnAttackAnimationComplete) or the fallback timer.
+    /// EnemyRangedAttack subscribes to know exactly when to spawn the projectile.</summary>
+    public event Action OnAttackReleased;
 
     private void Awake()
     {
@@ -80,11 +95,38 @@ public class EnemyAnimator : MonoBehaviour
         _spriteRenderer.flipX = _defaultFacesRight ? !_facingRight : _facingRight;
     }
 
-    /// <summary>Call when starting a melee or ranged attack windup (the actual damage/projectile
-    /// is timed and applied by the calling script, not here).</summary>
+    /// <summary>Call when starting a ranged attack windup. Fires the Attack trigger and arms
+    /// either the real release event (via the Animation Event) or the fallback timer, whichever
+    /// comes first. If no Animator is assigned at all, fires OnAttackReleased immediately —
+    /// same "no art yet" fallback PlayDeath() already uses for death.</summary>
     public void PlayAttack()
     {
-        if (_animator != null) _animator.SetTrigger(AttackHash);
+        if (_animator == null)
+        {
+            FinishAttackRelease();
+            return;
+        }
+
+        _animator.SetTrigger(AttackHash);
+
+        CancelInvoke(nameof(FinishAttackRelease));
+        Invoke(nameof(FinishAttackRelease), Mathf.Max(0.01f, _attackReleaseFallbackDuration));
+    }
+
+    /// <summary>Hook this up as an Animation Event on the Attack clip's release frame (the frame
+    /// the projectile should actually spawn).</summary>
+    public void OnAttackAnimationComplete()
+    {
+        CancelInvoke(nameof(FinishAttackRelease));
+        FinishAttackRelease();
+    }
+
+    private void FinishAttackRelease()
+    {
+        // Invoke() may still be pending if OnAttackAnimationComplete already fired this frame —
+        // CancelInvoke there already handles that, this just guards a direct double-call.
+        CancelInvoke(nameof(FinishAttackRelease));
+        OnAttackReleased?.Invoke();
     }
 
     /// <summary>Call once, from EnemyHealth, when this enemy dies.</summary>

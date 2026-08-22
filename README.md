@@ -4,19 +4,23 @@
 
 A 2D roguelite about a dead miner descending into the mine where he died, slowly piecing together who he was before the end.
 
-![Main menu](docs/Main_Menu.png)
+![Main menu](docs/Menu.png)
 
 ## Play
 
 **[Play Ephemeral on itch.io](https://nicormu.itch.io/ephemeral)** — runs in your browser, no download needed.
 
-![Gameplay](docs/Gameplay.png)
+![Gameplay](docs/Gameplay_0.png)
+![Gameplay](docs/Gameplay_1.png)
+![Gameplay](docs/Gameplay_2.png)
 
 ## Current state
 
 The game is in early development. Right now it's focused on **procedural mine generation**: randomly generated layouts, room connections with proper doors, floor/wall tiles, environmental decorations, obstacles, and an animated player character.
 
-**Still in progress:** enemies and combat, boss encounters, and the memory/story system.
+To see a new dungeons, reload the itch.io page
+
+**Still in progress:** combat, boss encounters, and the memory/story system.
 
 ## The idea
 

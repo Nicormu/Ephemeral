@@ -18,7 +18,6 @@ GameObject:
   - component: {fileID: 6162239107232602794}
   - component: {fileID: 6278364227265357259}
   - component: {fileID: 3924343188424863216}
-  - component: {fileID: 8982518866391061353}
   m_Layer: 9
   m_Name: PassiveBat
   m_TagString: Untagged
@@ -250,21 +249,7 @@ MonoBehaviour:
   _spriteRenderer: {fileID: 1088593842314623461}
   _defaultFacesRight: 1
   _deathFallbackDuration: 1
---- !u!114 &8982518866391061353
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4288472380421442653}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1cb773f4418236b32ba81c0428ded250, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::YSortRenderer
-  _spriteRenderer: {fileID: 1088593842314623461}
-  _orderOffset: 0
-  _sortReference: {fileID: 2752397441660898478}
+  _attackReleaseFallbackDuration: 0.5
 --- !u!1 &5116477914702976032
 GameObject:
   m_ObjectHideFlags: 0
@@ -276,6 +261,7 @@ GameObject:
   - component: {fileID: 7859915586556290633}
   - component: {fileID: 1088593842314623461}
   - component: {fileID: 3412878779713411780}
+  - component: {fileID: 816219973252462494}
   m_Layer: 9
   m_Name: Visual
   m_TagString: Untagged
@@ -379,3 +365,18 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &816219973252462494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5116477914702976032}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1cb773f4418236b32ba81c0428ded250, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::YSortRenderer
+  _spriteRenderer: {fileID: 1088593842314623461}
+  _orderOffset: 0
+  _sortReference: {fileID: 2752397441660898478}
