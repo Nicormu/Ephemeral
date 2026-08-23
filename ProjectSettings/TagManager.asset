@@ -11,8 +11,8 @@ TagManager:
   - 
   - Water
   - UI
-  - 
-  - 
+  - Hazard
+  - HazardOnlyFloor
   - Obstacle
   - FlyingEntity
   - Enemy
@@ -49,6 +49,9 @@ TagManager:
     locked: 0
   - name: Entities
     uniqueID: 3870366635
+    locked: 0
+  - name: FlyingEntities
+    uniqueID: 423326915
     locked: 0
   m_RenderingLayers:
   - Default

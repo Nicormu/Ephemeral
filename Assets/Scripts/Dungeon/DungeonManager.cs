@@ -12,6 +12,8 @@ public class DungeonManager : MonoBehaviour
     /// DungeonManager (obstacles) and YSortRenderer (player/enemies) can never drift out of sync.</summary>
     public const string EntitySortingLayerName = "Entities";
 
+    public const string FlyingEntitySortingLayerName = "FlyingEntities";
+
     // Base offset keeps every computed order comfortably positive/readable; precision controls
     // how many distinct Order-in-Layer steps exist per world unit of Y. sortingOrder is a short
     // (Unity clamps to roughly -32768..32767), so these two constants are chosen to stay well

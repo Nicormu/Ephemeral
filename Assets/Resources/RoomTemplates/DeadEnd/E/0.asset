@@ -23,10 +23,10 @@ MonoBehaviour:
   - {x: 6, y: 5}
   - {x: 6, y: 1}
   EnemySpawnEntries:
-  - EnemyPrefab: {fileID: 5648472656079964611, guid: 1e7919b4f880062d582a6cce6729403c, type: 3}
-    SpawnPointIndex: 1
   - EnemyPrefab: {fileID: 4288472380421442653, guid: 8ce6d38b3a780a104843fa0528160c0a, type: 3}
     SpawnPointIndex: 0
+  - EnemyPrefab: {fileID: 5648472656079964611, guid: 1e7919b4f880062d582a6cce6729403c, type: 3}
+    SpawnPointIndex: 1
   - EnemyPrefab: {fileID: 4288472380421442653, guid: 8ce6d38b3a780a104843fa0528160c0a, type: 3}
     SpawnPointIndex: 2
   - EnemyPrefab: {fileID: 4288472380421442653, guid: 8ce6d38b3a780a104843fa0528160c0a, type: 3}

@@ -81,9 +81,9 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingLayerID: 423326915
+  m_SortingLayer: 4
+  m_SortingOrder: 5
   m_MaskInteraction: 0
   m_Sprite: {fileID: 7535866131466136023, guid: 15d469ac6f4decd3e8ddb97f7fec1c97, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -195,3 +195,4 @@ MonoBehaviour:
   _speed: 4
   _damage: 1
   _lifetime: 4
+  _projectileLayerName: Projectile

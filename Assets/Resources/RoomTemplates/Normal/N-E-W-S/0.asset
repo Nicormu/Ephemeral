@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 0
   m_EditorClassIdentifier: Assembly-CSharp::RoomTemplateSO
   Type: 1
-  Doors: 0
+  Doors: -1
   ObstacleTypes: []
   EnemySpawnPoints:
   - {x: 2, y: 5}

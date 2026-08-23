@@ -53,6 +53,13 @@ public class MinimapController : MonoBehaviour
             if (RoomCamera.Instance.CurrentRoom.HasValue)
                 HandleRoomEntered(RoomCamera.Instance.CurrentRoom.Value);
         }
+
+        // Rebuild everything from scratch whenever the dungeon regenerates in place (e.g. R-key
+        // reset, or the post-death reset via DungeonResetController) — Regenerate() doesn't
+        // reload the scene, so without this the minimap keeps showing the previous dungeon's
+        // room lookup, icons, and visited/known state forever after the first generation.
+        if (DungeonManager.Instance != null)
+            DungeonManager.Instance.OnDungeonGenerated += HandleDungeonGenerated;
     }
 
     private void OnDestroy()
@@ -60,8 +67,46 @@ public class MinimapController : MonoBehaviour
         if (RoomCamera.Instance != null)
             RoomCamera.Instance.OnRoomEntered -= HandleRoomEntered;
 
+        if (DungeonManager.Instance != null)
+            DungeonManager.Instance.OnDungeonGenerated -= HandleDungeonGenerated;
+
         if (_repositionRoutine != null)
             StopCoroutine(_repositionRoutine);
+    }
+
+    /// <summary>Full reset for a fresh dungeon: destroys the previous generation's icons, clears
+    /// all visited/known/current-room state, then rebuilds the room lookup and icon set from the
+    /// new DungeonManager.Instance.Rooms. Resyncs the "current room" from DungeonManager's own
+    /// Start room position directly — NOT from RoomCamera.Instance.CurrentRoom — because at the
+    /// moment this event fires, RoomCamera hasn't run its own LateUpdate yet this frame and would
+    /// still be reporting the OLD dungeon's room for a moment. The player is guaranteed to be
+    /// standing in the new Start room by this point (DungeonManager.Initialize() positions them
+    /// before firing OnDungeonGenerated), so that's the reliable source of truth here.</summary>
+    private void HandleDungeonGenerated()
+    {
+        if (_repositionRoutine != null)
+        {
+            StopCoroutine(_repositionRoutine);
+            _repositionRoutine = null;
+        }
+
+        foreach (var icon in _icons.Values)
+            if (icon != null) Destroy(icon.gameObject);
+
+        _icons.Clear();
+        _visited.Clear();
+        _known.Clear();
+        _currentLogicalCoord = null;
+
+        BuildRoomLookup();
+        SpawnIcons();
+
+        if (DungeonManager.Instance != null)
+        {
+            Room? startRoom = DungeonManager.Instance.GetRoomAtGrid(DungeonManager.Instance.StartGridPosition);
+            if (startRoom.HasValue)
+                HandleRoomEntered(startRoom.Value);
+        }
     }
 
     private void ResizeMapContainer()

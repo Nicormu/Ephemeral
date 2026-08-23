@@ -42,5 +42,7 @@ public static class RoomPool
 
         if (!_anyDoorFallback.TryGetValue(template.Type, out var anyList)) { anyList = new List<RoomTemplate>(); _anyDoorFallback[template.Type] = anyList; }
         anyList.Add(template);
+
+        Debug.Log($"[Debug] Loaded template Type={template.Type} Doors={template.Doors} ({(int)template.Doors})");
     }
 }

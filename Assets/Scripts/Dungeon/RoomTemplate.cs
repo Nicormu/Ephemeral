@@ -6,6 +6,17 @@ public class RoomTemplate
 {
     public static readonly Vector2Int RoomTileSize = RoomTemplateSO.RoomTileSize;
 
+    // The only door bits FloorLayout.ComputeDoors() can ever request are these four — it's a
+    // plain OR of North/South/East/West, so the result is always in 0..15. If a RoomTemplateSO's
+    // Doors field was set via the Inspector's "Everything" entry instead of ticking each
+    // checkbox, Unity's default Flags-enum mask popup stores -1 (all 32 bits) rather than 15 —
+    // which would never equal FloorLayout's requested mask, causing RoomPool to silently miss
+    // the exact match and fall back to a same-type template with mismatched doors. Masking here,
+    // the single point where an SO's raw Doors value enters the runtime pipeline, makes matching
+    // correct regardless of how the value ended up serialized.
+    private const DoorDirection AllValidDoorBits =
+        DoorDirection.North | DoorDirection.South | DoorDirection.East | DoorDirection.West;
+
     public RoomType Type { get; set; }
     public DoorDirection Doors { get; set; }
     public (Vector2Int pos, CellState state, TileBase[] obstacleTileVariants, Sprite[] obstacleSpriteVariants,
@@ -44,10 +55,21 @@ public class RoomTemplate
             }
         }
 
+        DoorDirection sanitizedDoors = so.Doors & AllValidDoorBits;
+
+        if (sanitizedDoors != so.Doors)
+        {
+            Debug.LogWarning($"[RoomTemplate] '{so.name}' has a Doors value of {(int)so.Doors}, which includes bits " +
+                $"outside North|South|East|West (max valid value is 15). This happens when the Doors field was set via " +
+                $"the Inspector's \"Everything\" option instead of ticking each checkbox individually — Unity's mask " +
+                $"popup writes -1 for \"Everything\" rather than the sum of the four flags. Sanitized to " +
+                $"{(int)sanitizedDoors} ({sanitizedDoors}) so RoomPool matching works correctly.");
+        }
+
         return new RoomTemplate
         {
             Type = so.Type,
-            Doors = so.Doors,
+            Doors = sanitizedDoors,
             Cells = so.GetOccupiedCells(),
             EnemySpawns = enemySpawns.ToArray(),
             FloorTile = null,
