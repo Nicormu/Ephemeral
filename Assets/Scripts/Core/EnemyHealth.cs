@@ -1,15 +1,14 @@
 using UnityEngine;
 
 /// <summary>
-/// Enemy health — wraps HealthComponent and destroys the GameObject on death so RoomController
-/// can detect it (enemy cleanup depends on Destroy()). Max Health / Starting Health /
-/// Invulnerability are configured on the HealthComponent's own Inspector fields now (same
-/// GameObject) — this wrapper no longer duplicates or patches them.
+/// Enemy health — wraps HealthComponent and destroys the GameObject on death so
+/// RoomController can detect it and mark the room cleared.
 /// </summary>
 [RequireComponent(typeof(HealthComponent))]
 public class EnemyHealth : MonoBehaviour
 {
     private HealthComponent _health;
+    private EnemyKnockback _knockback; // optional — enemies with no EnemyKnockback just never get pushed
 
     public int CurrentHealth => _health.CurrentHealth;
     public int MaxHealth => _health.MaxHealth;
@@ -22,6 +21,7 @@ public class EnemyHealth : MonoBehaviour
     private void Awake()
     {
         _health = GetComponent<HealthComponent>();
+        _knockback = GetComponent<EnemyKnockback>();
         _health.OnDied += DestroySelf; // auto-destroy when health hits zero
     }
 
@@ -30,11 +30,18 @@ public class EnemyHealth : MonoBehaviour
         _health.OnDied -= DestroySelf; // avoid dangling reference
     }
 
-    /// <summary>Apply damage through the underlying HealthComponent. Added for
-    /// EnemyHazardDetector (Void/hazard damage) — any future weapon/projectile system that
-    /// damages enemies should call this same entry point instead of reaching into
-    /// HealthComponent directly, so invulnerability/death logic stays centralized.</summary>
-    public void TakeDamage(int amount) => _health.TakeDamage(amount);
+    public void TakeDamage(int amount, Vector2? sourcePosition = null, float knockbackPower = 0f)
+    {
+        // Snapshot whether this hit will actually land BEFORE calling TakeDamage — mirrors
+        // HealthComponent.TakeDamage's own guard (IsDead || IsInvulnerable || amount <= 0), so
+        // knockback only fires on a hit that actually applied damage, not a no-op one.
+        bool willApply = !_health.IsDead && !_health.IsInvulnerable && amount > 0;
+
+        _health.TakeDamage(amount);
+
+        if (willApply && sourcePosition.HasValue && knockbackPower > 0f && _knockback != null)
+            _knockback.ApplyKnockback(sourcePosition.Value, knockbackPower);
+    }
 
     private void DestroySelf() => Destroy(gameObject);
 }

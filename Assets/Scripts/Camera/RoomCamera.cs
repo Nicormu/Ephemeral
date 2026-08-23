@@ -26,15 +26,15 @@ public class RoomCamera : MonoBehaviour
     public static RoomCamera Instance { get; private set; }
 
     [Header("Target")]
-    [Tooltip("Player transform to track. Leave empty to auto-find PlayerMovement.Instance.")]
+    [Tooltip("Player transform to track")]
     [SerializeField] private Transform _target;
 
-    [Header("Door Transition (Isaac-style push)")]
+    [Header("Door Transition")]
     [Tooltip("Seconds for the camera-pan + player-glide when crossing through a door.")]
     [SerializeField] private float _doorTransitionDuration = 0.4f;
 
     [Header("Fallback Transition Style (non-door teleports)")]
-    [Tooltip("Isaac-style hard cut: the camera snaps instantly the moment the player's cell belongs to a new room. Turn off for a smooth pan/zoom instead. Only applies when the room change wasn't triggered via BeginRoomTransition (e.g. hazard recovery, spawn).")]
+    [Tooltip("Camera snaps instantly the moment the player's cell belongs to a new room. Turn off for a smooth pan/zoom instead.")]
     [SerializeField] private bool _instantSnap = true;
 
     [Tooltip("Seconds to pan/zoom for a non-door room change. Only used when Instant Snap is OFF.")]
@@ -48,15 +48,15 @@ public class RoomCamera : MonoBehaviour
     private Coroutine _transitionRoutine;
     private bool _isDoorTransitioning;
 
-    /// <summary>Fired every time the tracked "current room" changes — via door crossing, instant
-    /// snap, or smooth non-door transition. Listeners (e.g. MinimapController) get the full Room
-    /// struct, not just its GridPos, so they don't need a second lookup.</summary>
+    /// <summary>
+    /// Fired every time the tracked "current room" changes. 
+    /// Listeners get the full Room struct, not just its GridPos, so they don't need a second lookup.
+    /// </summary>
     public event Action<Room> OnRoomEntered;
 
-    /// <summary>The room the tracked target is currently considered to be in, kept in sync with
-    /// every OnRoomEntered firing. Lets a listener that subscribes late (e.g. in its own Start(),
-    /// where MonoBehaviour Start() order vs. this component's Start() isn't guaranteed) pull the
-    /// current state directly instead of only relying on catching the next event.</summary>
+    /// <summary>
+    /// The room the tracked target is currently considered to be in.
+    /// </summary>
     public Room? CurrentRoom { get; private set; }
 
     private void Awake()
@@ -84,8 +84,6 @@ public class RoomCamera : MonoBehaviour
 
     private void LateUpdate()
     {
-        // A door crossing is already driving the player's position and the camera's framing
-        // frame-by-frame in TransitionAcrossRooms() — don't fight it here.
         if (_isDoorTransitioning) return;
 
         if (_target == null)
@@ -98,7 +96,7 @@ public class RoomCamera : MonoBehaviour
 
         Vector2Int cell = DungeonManager.WorldToGridCell(_target.position);
         Room? room = DungeonManager.Instance.GetRoomAtGrid(cell);
-        if (room == null) return; // player is momentarily over a Void cell — keep current framing
+        if (room == null) return; 
 
         if (_currentRoomGridPos == null || room.Value.GridPos != _currentRoomGridPos.Value)
         {
@@ -110,11 +108,8 @@ public class RoomCamera : MonoBehaviour
     }
 
     /// <summary>
-    /// Call this instead of PlayerMovement.TeleportTo() when the player is crossing a door.
     /// Locks player control, then glides the player to 'destination' and pans/zooms the camera
     /// to whatever room contains that destination, in lockstep, over _doorTransitionDuration.
-    /// Falls back to an instant teleport if the destination isn't inside any known room (should
-    /// only happen if dungeon data is missing) or if a transition is already in progress.
     /// </summary>
     public void BeginRoomTransition(PlayerMovement player, Vector3 destination)
     {
@@ -225,7 +220,9 @@ public class RoomCamera : MonoBehaviour
         }
     }
 
-    /// <summary>Ortho size needed so the room fits fully on screen at the current aspect ratio.</summary>
+    /// <summary>
+    /// Ortho size needed so the room fits fully on screen at the current aspect ratio.
+    /// </summary>
     private float CalculateOrthoSize(int roomWidth, int roomHeight)
     {
         float halfHeight = roomHeight / 2f + _padding;

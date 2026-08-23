@@ -2,17 +2,15 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Handles the Exit flow: Exit button → confirmation popup → eyelid-close animation → quit.
-///
 /// Flow:
 ///   1. Exit button calls ShowConfirmation() — shows the "Are you sure?" panel.
 ///   2. Yes button calls ConfirmExit() — hides the panel, plays the eyelid-close animation,
 ///      then quits.
 ///   3. No button calls CancelExit() — just hides the panel, nothing else happens.
 ///
-/// The eyelid animation is driven entirely in code (no Animator/art needed): two black UI
+/// The eyelid animation is driven entirely in code: two black UI
 /// panels (top/bottom) grow from height 0 to fully covering the screen, meeting in the middle
-/// like closing eyelids. See TopEyelid/BottomEyelid RectTransform setup notes in the class doc.
+/// like closing eyelids.
 /// </summary>
 public class Exit : MonoBehaviour
 {
@@ -24,13 +22,13 @@ public class Exit : MonoBehaviour
     [Tooltip("Parent GameObject holding both eyelid Images. Should start inactive in the scene.")]
     [SerializeField] private GameObject _eyelidOverlay;
 
-    [Tooltip("RectTransform anchored to the TOP edge (AnchorMin/Max Y = 1, Pivot Y = 1). SizeDelta.y animates from 0 to _eyelidTargetHeight.")]
+    [Tooltip("RectTransform anchored to the TOP edge.")]
     [SerializeField] private RectTransform _topEyelid;
 
-    [Tooltip("RectTransform anchored to the BOTTOM edge (AnchorMin/Max Y = 0, Pivot Y = 0). SizeDelta.y animates from 0 to _eyelidTargetHeight.")]
+    [Tooltip("RectTransform anchored to the BOTTOM edge.")]
     [SerializeField] private RectTransform _bottomEyelid;
 
-    [Tooltip("How tall each eyelid grows, in pixels (UI space). Should be at least half the Canvas's reference resolution height so they fully meet in the middle — pad it a bit beyond exact half to guarantee full coverage on any aspect ratio.")]
+    [Tooltip("How tall each eyelid grows, in pixels (UI space).")]
     [SerializeField] private float _eyelidTargetHeight = 650f;
 
     [Tooltip("Seconds for the eyelids to close completely.")]
@@ -53,7 +51,9 @@ public class Exit : MonoBehaviour
         if (_bottomEyelid != null) SetEyelidHeight(_bottomEyelid, 0f);
     }
 
-    /// <summary>Call from the main Exit button's OnClick.</summary>
+    /// <summary>
+    /// Call from the main Exit button's OnClick.
+    /// </summary>
     public void ShowConfirmation()
     {
         if (_isClosing) return; // already quitting — ignore stray clicks
@@ -68,13 +68,17 @@ public class Exit : MonoBehaviour
         _confirmationPanel.SetActive(true);
     }
 
-    /// <summary>Call from the confirmation panel's "No" / cancel button.</summary>
+    /// <summary>
+    /// Call from the confirmation panel's "No" / cancel button.
+    /// </summary>
     public void CancelExit()
     {
         if (_confirmationPanel != null) _confirmationPanel.SetActive(false);
     }
 
-    /// <summary>Call from the confirmation panel's "Yes" button.</summary>
+    /// <summary>
+    /// Call from the confirmation panel's "Yes" button.
+    /// </summary>
     public void ConfirmExit()
     {
         if (_isClosing) return;

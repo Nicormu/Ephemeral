@@ -1,36 +1,30 @@
 using UnityEngine;
 
 /// <summary>
-/// Shared flight state for ANY entity — Player or Enemy — that can fly. A single toggleable
-/// component instead of separate Player/Enemy wrappers (unlike HealthComponent's Player/Enemy
-/// wrappers, "can this entity fly right now" needs no entity-specific behavior, just a bool and
-/// a Layer swap), so both share this exact class.
+/// Shared flight state for ANY entity — Player or Enemy — that can fly. 
+/// "can this entity fly right now" needs no entity-specific behavior, 
+/// just a bool and a Layer swap), so both share this exact class.
 ///
-/// Also keeps this GameObject's Physics2D Layer in sync with IsFlying: while flying, it switches
-/// to _flyingLayerName (which should have collision with the "Obstacle" layer disabled in the
-/// Physics2D Collision Matrix — see Project Settings > Physics 2D), so blocking obstacles (rocks)
-/// are physically passed through automatically, with zero other script needing to touch Layer.
-/// Switches back to the entity's original layer the moment flight turns off.
+/// Blocking obstacles (rocks) are physically passed through automatically, with zero other script needing to touch Layer.
 ///
-/// Hazard/Void immunity (see PlayerHazardDetector) is handled separately, by code that reads
-/// IsFlying — NOT by physics layers, because that needs PER-OBSTACLE-TYPE granularity (e.g.
-/// Fire should still damage a flying entity, Spikes shouldn't — see ObstacleType.IgnoredByFlyingEntities).
+/// Hazard/Void immunity is handled separately, see ObstacleType.IgnoredByFlyingEntities.
 /// </summary>
 public class FlightComponent : MonoBehaviour
 {
-    [Tooltip("If true, this entity starts already flying (e.g. a bat enemy that's always airborne). Leave false for entities that need to unlock/toggle flight at runtime (e.g. the player picking up a flight power-up) — call SetFlying(true) from that pickup's script instead.")]
+    [Tooltip("Idk what to tell you, the name says it :p. If true, this entity will start the game flying. If false, it will start grounded.")]
     [SerializeField] private bool _startsFlying = false;
 
-    [Tooltip("Physics2D Layer to switch this GameObject to while flying. Should have collision with the 'Obstacle' layer UNCHECKED in the Physics2D Collision Matrix, and collision with your wall layer left CHECKED so flying entities still stay contained inside rooms.")]
+    [Tooltip("Physics2D Layer to switch this GameObject to while flying.")]
     [SerializeField] private string _flyingLayerName = "FlyingEntity";
 
     private int _groundedLayer;
     private int _flyingLayer;
     private bool _isFlying;
 
-    /// <summary>Whether this entity is currently flying. Read by hazard-detection code
-    /// (PlayerHazardDetector today, a future EnemyHazardDetector later) to decide whether
-    /// Void-fall damage and per-ObstacleType hazard damage apply.</summary>
+    /// <summary>
+    /// Whether this entity is currently flying. 
+    /// Read by hazard-detection code to decide whether Void-fall damage and per-ObstacleType hazard damage apply.
+    /// </summary>
     public bool IsFlying => _isFlying;
 
     private void Awake()
@@ -50,9 +44,10 @@ public class FlightComponent : MonoBehaviour
         SetFlying(_startsFlying);
     }
 
-    /// <summary>Turns flight on/off — swaps the GameObject's Layer to match, so physical
-    /// collision with blocking obstacles (rocks) changes immediately. Call this from a power-up
-    /// pickup, a status-effect timer, etc.</summary>
+    /// <summary>
+    /// Turns flight on/off — swaps the GameObject's Layer to match
+    /// I could used it to make player fly in a future
+    /// </summary>
     public void SetFlying(bool value)
     {
         _isFlying = value;

@@ -99,6 +99,15 @@ public class DungeonManager : MonoBehaviour
     public Vector2Int BossGridPosition => _currentLayout.BossPosition;
     public RoomStyleSO ChosenStyle => _chosenStyle;
 
+    /// <summary>Fired once a generation (initial Initialize() or a later Regenerate()) has
+    /// finished successfully — after rooms, visuals, room controllers/enemies, doors, and player
+    /// spawn positioning are all in place. Anything that caches its own copy of dungeon data
+    /// (today: MinimapController) should subscribe to this and rebuild from Rooms/CurrentLayout
+    /// instead of only reading them once at Start() — otherwise a Regenerate() (R-key reset, or
+    /// the post-death reset) leaves it pointing at destroyed Room data from the previous dungeon.
+    /// Deliberately NOT fired if generation fails (e.g. FloorLayout produced zero rooms).</summary>
+    public event System.Action OnDungeonGenerated;
+
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -161,6 +170,8 @@ public class DungeonManager : MonoBehaviour
             SpawnDungeonVisuals();
             _playerSpawner.CalculateSpawnPosition(_currentLayout.Rooms, _currentLayout.StartPosition);
             _playerSpawner.PositionPlayerAtSpawn();
+
+            OnDungeonGenerated?.Invoke();
         }
         catch (System.Exception ex)
         {

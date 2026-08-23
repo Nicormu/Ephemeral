@@ -4,28 +4,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Isaac-style heart display driven entirely by PlayerHealth.OnHealthChanged, with a small
+/// Heart display driven entirely by PlayerHealth.OnHealthChanged, with a small
 /// "punch" animation on damage and a "pop" animation on healing so the row doesn't feel static.
-/// 
-/// ANIMATION ARCHITECTURE NOTE: per-heart animations are driven from Update() using tracked
-/// elapsed-time floats, NOT coroutines. A coroutine that gets stopped early (StopCoroutine, or
-/// the GameObject/component being disabled mid-flight) never runs the code after its final
-/// yield — including a "reset scale back to normal" cleanup line — which can leave a heart
-/// stuck visually enlarged forever. Update() has no such gap: every frame computes scale
-/// directly from elapsed time with no separate cleanup step, and if paused by the GameObject
-/// going inactive, it simply resumes from the same elapsed value next frame instead of losing
-/// its final reset.
-/// 
-/// HP UNIT CONVENTION: HealthComponent/PlayerHealth stay plain int, unchanged. This script
-/// treats those int units as HALF-HEART units: 2 units = 1 full heart. Even MaxHealth values
-/// mean a whole number of hearts (4 = 2 hearts); odd values mean the last heart is a half heart
-/// 5 = 2 full hearts + 1 half heart. No other script needs to know about this convention —
-/// every existing damage source (EnemyMeleeContactDamage, Projectile, ObstacleType.Damage,
-/// PlayerObstacleContactDamage) keeps passing plain int amounts exactly as before.
-/// 
-/// Heart icons are spawned dynamically from _heartIconPrefab based on MaxHealth, so the row
-/// automatically grows/shrinks if MaxHealth ever changes at runtime (e.g. a future max-health
-/// pickup) — nothing needs to be hand-placed in the Canvas beyond the container.
 /// </summary>
 public class PlayerHealthUI : MonoBehaviour
 {
@@ -89,17 +69,12 @@ public class PlayerHealthUI : MonoBehaviour
             PlayerHealth.Instance.OnHealthChanged -= HandleHealthChanged;
         }
 
-        // Defensive: snap every heart back to resting scale/color immediately on disable,
+        // Snap every heart back to resting scale/color immediately on disable,
         // so if this component (or its GameObject) gets toggled off mid-animation for any
         // reason, it never comes back showing a heart frozen mid-punch.
         SnapAllHeartsToResting();
     }
 
-    /// <summary>
-    /// PlayerHealth.Instance may not exist yet the instant this UI enables (scene load
-    /// order isn't guaranteed) — poll once per frame until it appears, same problem
-    /// MinimapController/PlayerAnimator solve by reading *.Instance defensively.
-    /// </summary>
     private IEnumerator SubscribeWhenReady()
     {
         while (PlayerHealth.Instance == null)
@@ -145,7 +120,6 @@ public class PlayerHealthUI : MonoBehaviour
 
             if (_heartAnimStates[i] == HeartAnimState.Punching)
             {
-                // Sin(0..PI) rises to a peak at t=0.5 and returns to 0 at t=1 —
                 // a clean punch-out-and-settle in one continuous curve.
                 float punch =
                     Mathf.Sin(t * Mathf.PI) * _punchScaleAmount;

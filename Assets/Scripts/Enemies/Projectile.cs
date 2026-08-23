@@ -13,41 +13,54 @@ public class Projectile : MonoBehaviour
     [SerializeField] private int _damage = 1;
     [SerializeField] private float _lifetime = 4f;
 
-    private Rigidbody2D _rb;
-    private SpriteRenderer _sr;
+    [Tooltip("Physics2D Layer this projectile is forced onto at spawn — must have collision with itself DISABLED in Project Settings > Physics 2D > Layer Collision Matrix, so two projectiles never trigger against each other. Create this layer first (it can't be created from script).")]
+    [SerializeField] private string _projectileLayerName = "Projectile";
 
-    // Lazily-created shared parent for every spawned projectile, purely for Hierarchy
-    // organization — keeps them out of the scene root regardless of which script (today just
-    // EnemyRangedAttack, potentially a future player weapon) does the spawning. Unity's
-    // overridden == on UnityEngine.Object means this null-check also catches the container
-    // having been destroyed (e.g. a scene reload), so a fresh one is created automatically
-    // instead of silently reparenting under a dead Transform.
+    // Lazily created the first time any Projectile spawns — keeps every projectile organized
+    // under one Hierarchy object instead of cluttering the scene root. Static, so it's shared
+    // across every Projectile instance/prefab and only ever created once per scene.
     private static Transform _projectilesContainer;
 
-    private static Transform GetProjectilesContainer()
-    {
-        if (_projectilesContainer == null)
-            _projectilesContainer = new GameObject("Projectiles").transform;
-
-        return _projectilesContainer;
-    }
+    private Rigidbody2D _rb;
+    private SpriteRenderer _sr;
 
     private void Awake()
     {
         _rb = GetComponent<Rigidbody2D>();
         _sr = GetComponent<SpriteRenderer>();
 
-        // worldPositionStays: true — this runs after Instantiate() already placed us at our
-        // launch position, and the container sits at the world origin with no rotation/scale,
-        // so this is purely a Hierarchy move, never a visual/positional one.
-        transform.SetParent(GetProjectilesContainer(), worldPositionStays: true);
-
         // Same safety net DungeonManager uses for obstacles — force this onto the shared
         // "Entities" sorting layer so it can never render behind the floor tilemap regardless
         // of what the prefab's own Inspector value happens to be.
         _sr.sortingLayerName = DungeonManager.EntitySortingLayerName;
 
+        // Force the physics layer too — a projectile prefab left on "Default" (or any layer
+        // that collides with itself) is what let two projectiles trigger against and destroy
+        // each other. This guarantees every projectile ends up on the correct layer regardless
+        // of what a given prefab's Inspector value happens to be, same reasoning as the
+        // sorting-layer force above.
+        if (!string.IsNullOrEmpty(_projectileLayerName))
+        {
+            int resolved = LayerMask.NameToLayer(_projectileLayerName);
+            if (resolved < 0)
+                Debug.LogWarning($"[Projectile] Layer '{_projectileLayerName}' doesn't exist — create it under Project Settings > Tags and Layers, and disable its self-collision in Physics 2D > Layer Collision Matrix. Projectile-vs-projectile collisions won't be prevented until that's fixed.");
+            else
+                gameObject.layer = resolved;
+        }
+
+        transform.SetParent(GetProjectilesContainer(), worldPositionStays: true);
+
         Destroy(gameObject, _lifetime);
+    }
+
+    private static Transform GetProjectilesContainer()
+    {
+        if (_projectilesContainer == null)
+        {
+            var go = new GameObject("Projectiles");
+            _projectilesContainer = go.transform;
+        }
+        return _projectilesContainer;
     }
 
     private void LateUpdate()
@@ -61,9 +74,8 @@ public class Projectile : MonoBehaviour
     {
         _rb.linearVelocity = direction * _speed;
 
-        // Rotate the sprite to face its travel direction. Assumes the sprite's default artwork
-        // points along +X (Vector2.right) — if your art faces a different default direction,
-        // add/subtract the appropriate offset to the angle below (e.g. -90f if the art faces up).
+        // Rotate to face the travel direction so the sprite points where it's actually going,
+        // instead of always rendering at its default prefab orientation.
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         transform.rotation = Quaternion.Euler(0f, 0f, angle);
     }

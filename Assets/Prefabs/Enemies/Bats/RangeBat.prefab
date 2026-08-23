@@ -193,6 +193,7 @@ GameObject:
   - component: {fileID: 6255088662919070637}
   - component: {fileID: 851602040308380042}
   - component: {fileID: 916417473029488326}
+  - component: {fileID: -1033697550846104536}
   m_Layer: 0
   m_Name: RangeBat
   m_TagString: Untagged
@@ -352,8 +353,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7424c5364c42956dbb3337b2994fb7d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HealthComponent
-  _maxHealth: 3
-  _startingHealth: 3
+  _maxHealth: 20
+  _startingHealth: 20
   _invulnerabilityDuration: 0.1
 --- !u!114 &3940756446576820820
 MonoBehaviour:
@@ -406,7 +407,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6899a3b679ef9257b8d361675b7b905, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyChaseMovement
-  _moveSpeed: 0.7
+  _moveSpeed: 1.2
   _detectionRange: 13
   _stoppingDistance: 2
 --- !u!114 &851602040308380042
@@ -442,3 +443,17 @@ MonoBehaviour:
   _firePoint: {fileID: 1961610690977519182}
   _fireInterval: 4
   _detectionRange: 6
+--- !u!114 &-1033697550846104536
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7960732215505570430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90cd958a5b91bccfeb9efce44e132ef9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyKnockback
+  _weight: 1
+  _knockbackDuration: 0.15

@@ -2,8 +2,6 @@ using UnityEngine;
 
 /// <summary>
 /// Player health — wraps HealthComponent and exposes singleton access + healing.
-/// Max Health / Starting Health / Invulnerability are configured on the HealthComponent's own
-/// Inspector fields now (same GameObject) — this wrapper no longer duplicates or patches them.
 /// </summary>
 [RequireComponent(typeof(HealthComponent))]
 public class PlayerHealth : MonoBehaviour
@@ -32,9 +30,18 @@ public class PlayerHealth : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
-    /// <summary>Restore health. Unlike most entities, the player can heal.</summary>
+    /// <summary>
+    /// Restore health. Unlike most entities, the player can heal.
+    /// </summary>
     public void Heal(int amount) => _health.Heal(amount);
 
-    /// <summary>Apply damage through the underlying HealthComponent.</summary>
+    /// <summary>
+    /// Apply damage through the underlying HealthComponent.
+    /// </summary>
     public void TakeDamage(int amount) => _health.TakeDamage(amount);
+
+    /// <summary>
+    /// Restores the player to full health and clears IsDead — used for a full run reset (dungeon regenerate + respawn).
+    /// </summary>
+    public void ResetHealth() => _health.ResetHealth();
 }

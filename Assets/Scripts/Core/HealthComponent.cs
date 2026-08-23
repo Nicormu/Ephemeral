@@ -3,10 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Shared health logic for any entity that can take damage and die.
-/// Max Health, Starting Health, and Invulnerability Duration are configured directly here in
-/// the Inspector — this is now the ONLY place these values live. PlayerHealth / EnemyHealth no
-/// longer duplicate them; they just wrap this component's public API (TakeDamage, Heal, events)
-/// for singleton access and entity-specific behavior (e.g. auto-destroy on death for enemies).
+/// Max Health, Starting Health, and Invulnerability Duration are configured directly here
 /// </summary>
 public class HealthComponent : MonoBehaviour
 {
@@ -21,6 +18,7 @@ public class HealthComponent : MonoBehaviour
 
     private int _currentHealth;
     private float _lastDamageTime = -999f;
+    private bool _hasDied;
 
     public int CurrentHealth => _currentHealth;
     public int MaxHealth => _maxHealth;
@@ -36,10 +34,7 @@ public class HealthComponent : MonoBehaviour
     }
 
     /// <summary>
-    /// Reconfigure health values at runtime (e.g. difficulty scaling, or spawning a "damaged"
-    /// enemy variant from code). Unlike the old Configure(), this explicitly RESETS current
-    /// health to newStartingHealth instead of just clamping whatever was left over — so the
-    /// result no longer depends on component Awake() execution order.
+    /// Reconfigure health values at runtime (e.g. for a new enemy type or a player upgrade). This resets current health to the new starting value.
     /// </summary>
     public void Configure(int newMaxHealth, int newStartingHealth, float newInvulnerabilityDuration)
     {
@@ -50,7 +45,9 @@ public class HealthComponent : MonoBehaviour
         OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
     }
 
-    /// <summary>Apply damage with invulnerability guard. Raises OnHealthChanged and possibly OnDied.</summary>
+    /// <summary>
+    /// Apply damage with invulnerability guard. Raises OnHealthChanged and possibly OnDied.
+    /// </summary>
     public void TakeDamage(int amount)
     {
         if (IsDead || IsInvulnerable || amount <= 0) return;
@@ -63,7 +60,9 @@ public class HealthComponent : MonoBehaviour
             Die();
     }
 
-    /// <summary>Heal up to Max Health. Override in a subclass to disable healing for specific entity types.</summary>
+    /// <summary>
+    /// Heal up to Max Health. Override in a subclass to disable healing for specific entity types.
+    /// </summary>
     public virtual void Heal(int amount)
     {
         if (IsDead || amount <= 0) return;
@@ -71,10 +70,21 @@ public class HealthComponent : MonoBehaviour
         OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
     }
 
-    /// <summary>Called when health reaches zero. Override in a subclass to add death effects.</summary>
+    /// <summary>
+    /// Restores current health back to Max Health and clears the invulnerability/damage timer
+    /// </summary>
+    public void ResetHealth()
+    {
+        _currentHealth = _maxHealth;
+        _lastDamageTime = -999f;
+        _hasDied = false;
+        OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
+    }
+
     protected virtual void Die()
     {
-        if (IsDead) return; // guard against double-die
+        if (_hasDied) return; // guard against double-die
+        _hasDied = true;
         OnDied?.Invoke();
     }
 

@@ -4,12 +4,8 @@ using UnityEngine;
 /// Keeps this GameObject's SpriteRenderer correctly Y-sorted against everything else on the
 /// shared "Entities" Sorting Layer (obstacles, other movers) by recomputing Order in Layer every
 /// frame from the current world Y position — using the exact same formula
-/// DungeonManager.CalculateYSortOrder uses for static obstacles, so a moving player/enemy always
-/// interleaves correctly with them (walks behind a rock above it, in front of one below it).
-///
-/// Attach this to the Player and to every enemy prefab that should visually sort against
-/// obstacles. Static obstacles don't need this component — DungeonManager computes their Order
-/// in Layer once at spawn time instead, since they never move.
+/// 
+/// Should be used in player and entities that move around the map.
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class YSortRenderer : MonoBehaviour

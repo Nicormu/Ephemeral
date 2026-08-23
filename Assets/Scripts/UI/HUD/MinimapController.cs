@@ -112,7 +112,7 @@ public class MinimapController : MonoBehaviour
         _visited.Add(logical);
         _known.Remove(logical);
 
-        // Keeps fog-of-war working: only reveal rooms connected by an actual door path.
+        // Only reveal rooms connected by an actual door path.
         foreach (var dir in AllDirections)
         {
             if ((room.Doors & dir) == 0) continue;
@@ -127,8 +127,10 @@ public class MinimapController : MonoBehaviour
         RepositionIcons();
     }
 
-    /// <summary>Starts (or restarts) a smooth glide of every icon toward its new anchored
-    /// position relative to the current room, instead of snapping instantly.</summary>
+    /// <summary>
+    /// Smooth glide of every icon toward its new anchored
+    /// position relative to the current room, instead of snapping instantly.
+    /// </summary>
     private void RepositionIcons()
     {
         if (!_currentLogicalCoord.HasValue) return;

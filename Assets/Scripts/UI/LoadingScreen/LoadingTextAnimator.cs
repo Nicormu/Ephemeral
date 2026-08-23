@@ -29,15 +29,14 @@ public class LoadingTextAnimator : MonoBehaviour
     {
         while (true)
         {
-            // Build the string: e.g., "Loading." -> "Loading.." -> "Loading..."
+            // Build the string with the appropriate number of dots
             string dots = new string('.', dotCount + 1);
             
             if (loadingText != null)
             {
                 loadingText.text = baseText + dots;
             }
-
-            // Cycle dotCount between 0, 1, and 2 (for 1, 2, and 3 dots)
+            
             dotCount = (dotCount + 1) % 3;
 
             yield return new WaitForSeconds(changeInterval);

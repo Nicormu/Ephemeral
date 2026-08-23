@@ -149,6 +149,7 @@ GameObject:
   - component: {fileID: 7444236815434413323}
   - component: {fileID: 8676669090367535290}
   - component: {fileID: 6035926886503675832}
+  - component: {fileID: 5134923803835998740}
   m_Layer: 9
   m_Name: MeleeBat
   m_TagString: Untagged
@@ -321,8 +322,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7424c5364c42956dbb3337b2994fb7d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HealthComponent
-  _maxHealth: 3
-  _startingHealth: 3
+  _maxHealth: 30
+  _startingHealth: 30
   _invulnerabilityDuration: 0.1
 --- !u!114 &8069498492382693642
 MonoBehaviour:
@@ -380,6 +381,7 @@ MonoBehaviour:
   _spriteRenderer: {fileID: 3105530089212463940}
   _defaultFacesRight: 1
   _deathFallbackDuration: 1
+  _attackReleaseFallbackDuration: 0.5
 --- !u!114 &6035926886503675832
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -394,3 +396,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyMeleeContactDamage
   _damage: 1
   _damageCooldown: 1
+--- !u!114 &5134923803835998740
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5648472656079964611}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90cd958a5b91bccfeb9efce44e132ef9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyKnockback
+  _weight: 1
+  _knockbackDuration: 0.15

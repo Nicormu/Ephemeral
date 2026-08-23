@@ -46,17 +46,16 @@ public class SceneLoader : MonoBehaviour
             yield break;
         }
 
-        // 1. Show the loading screen.
         loadingScreenCanvas.SetActive(true);
 
         if (logDebugMessages) Debug.Log("[SceneLoader] Loading screen shown");
 
-        // 2. Start loading the scene in the background.
+        // Start loading the scene in the background.
         AsyncOperation operation = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
 
         if (operation.isDone || operation.progress >= 0.9f)
         {
-            // Scene is already fully loaded (e.g., single-file scene, or editor hot-load).
+            // Scene is already fully loaded or is in the process of loading and has reached 90% progress.
             // Just set activation to true so it becomes playable immediately.
             operation.allowSceneActivation = true;
             if (logDebugMessages) Debug.Log($"[SceneLoader] Scene \"{sceneName}\" was already loaded — activating.");
@@ -69,9 +68,7 @@ public class SceneLoader : MonoBehaviour
         // Prevent the scene from instantly activating when it finishes loading.
         operation.allowSceneActivation = false;
 
-        // 3. Keep updating while the scene is still loading.
-        // Unity's async progress stops at 0.9f when allowSceneActivation is false,
-        // using the remaining time for post-load work (object instantiation, etc.).
+        // Keep updating while the scene is still loading.
         int lastProgress = 0;
         float timeout = 120f; // safety net — give up after 2 minutes to avoid infinite loops.
         float elapsed = 0f;
@@ -98,18 +95,15 @@ public class SceneLoader : MonoBehaviour
             yield return null;
         }
 
-        // Optional: wait a fraction of a second so the player sees the transition.
-        yield return new WaitForSeconds(0.5f);
+        // Optional: Wait a fraction of a second so the player sees the transition.
+        //yield return new WaitForSeconds(0.5f);
 
-        // 4. Activate the loaded scene.
+        // Activate the loaded scene.
         if (operation != null)
             operation.allowSceneActivation = true;
 
         if (logDebugMessages) Debug.Log($"[SceneLoader] Scene \"{sceneName}\" activated");
 
-        // The loading screen will disappear when the old scene unloads.
-        // No need to manually hide it — that code was running on a destroyed object.
-
-        yield return null; // allow one frame for Unity to settle the transition.
+        yield return null; // Allow one frame for Unity to settle the transition.
     }
 }
