@@ -6,6 +6,9 @@ using UnityEngine.UI;
 /// Shared full-screen fade-to-black utility. Owns a single full-screen Image and exposes simple
 /// FadeToBlack/FadeFromBlack coroutines so multiple systems (PlayerDeathScreen,
 /// DungeonResetController) can reuse the same panel/logic instead of each maintaining its own.
+/// SetAlpha() additionally lets a caller drive the fade frame-by-frame itself (e.g.
+/// DungeonResetController's hold-to-restart, which ties fade progress directly to how long a key
+/// has been held) instead of only doing fixed-duration fades.
 /// </summary>
 public class ScreenFader : MonoBehaviour
 {
@@ -15,10 +18,10 @@ public class ScreenFader : MonoBehaviour
     [SerializeField] private Image _fadePanel;
 
     /// <summary>
-    /// True once a FadeToBlack has completed and no FadeFromBlack has run since. Lets a
-    /// caller (DungeonResetController) check "is the screen already black?" before deciding
-    /// whether it needs to fade in itself, e.g. when triggered right after PlayerDeathScreen's
-    /// own fade-in.
+    /// True once the panel's alpha has reached fully opaque (via FadeToBlack completing, or
+    /// SetAlpha(1)) and hasn't been brought back down since. Lets a caller (DungeonResetController)
+    /// check "is the screen already black?" before deciding whether it needs to fade in itself,
+    /// e.g. when triggered right after PlayerDeathScreen's own fade-in.
     /// </summary>
     public bool IsBlack { get; private set; }
 
@@ -52,6 +55,21 @@ public class ScreenFader : MonoBehaviour
     {
         yield return FadeTo(0f, duration);
         IsBlack = false;
+    }
+
+    /// <summary>Directly sets the panel's alpha (0 = clear, 1 = fully black) with no coroutine/
+    /// duration — for callers that want to drive the fade themselves frame-by-frame (e.g. tying
+    /// it to how long a key has been held). Updates IsBlack to match.</summary>
+    public void SetAlpha(float alpha)
+    {
+        if (_fadePanel == null) return;
+
+        alpha = Mathf.Clamp01(alpha);
+        Color c = _fadePanel.color;
+        c.a = alpha;
+        _fadePanel.color = c;
+
+        IsBlack = alpha >= 1f;
     }
 
     private IEnumerator FadeTo(float targetAlpha, float duration)

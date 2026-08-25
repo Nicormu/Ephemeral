@@ -198,6 +198,35 @@ public class RoomCamera : MonoBehaviour
         MoveToRoom(room.Value, instant: true);
     }
 
+    /// <summary>
+    /// Clears the cached "current room" (CurrentRoom / internal GridPos tracking) WITHOUT firing
+    /// OnRoomEntered. Must be called by DungeonManager at the start of every generation — initial
+    /// or Regenerate() — before any new RoomController is created.
+    ///
+    /// WHY THIS MATTERS: RoomController.Initialize() has a "catch-up" check that reads
+    /// RoomCamera.Instance.CurrentRoom to handle the case where the player is already standing in
+    /// a room's cell by the time that room's controller spawns. On a fresh dungeon generation,
+    /// DungeonManager builds ALL new rooms/doors synchronously and only teleports the player
+    /// afterward — RoomCamera's own LateUpdate() never gets a frame to run in between, so without
+    /// this reset, CurrentRoom would still hold the OLD dungeon's room (e.g. wherever the player
+    /// died). Since dungeon generation always grows from grid cell (0,0), a new room can easily
+    /// land on the exact same GridPos as an old one (very commonly the room directly
+    /// north/south/east/west of Start) — RoomController's catch-up check only compares GridPos,
+    /// so it would incorrectly mark that brand-new room as "already entered" before the player
+    /// ever set foot in it. If that room has enemies, its doors then lock immediately and can
+    /// never legitimately unlock, since the player never "really" entered it as far as RoomCamera
+    /// is concerned.
+    ///
+    /// Deliberately does NOT stop an in-progress door-transition coroutine (_isDoorTransitioning)
+    /// — regenerating mid-transition is a narrow, unlikely edge case (e.g. triggering a
+    /// hold-to-reset while crossing a door) and isn't handled specially here.
+    /// </summary>
+    public void ResetTracking()
+    {
+        _currentRoomGridPos = null;
+        CurrentRoom = null;
+    }
+
     private void MoveToRoom(Room room, bool instant)
     {
         Vector3 targetPos = new Vector3(

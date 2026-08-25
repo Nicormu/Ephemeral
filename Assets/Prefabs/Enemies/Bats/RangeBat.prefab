@@ -82,7 +82,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 423326915
   m_SortingLayer: 4
-  m_SortingOrder: 5
+  m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: -1085711696175172977, guid: e5c768528c3eeff3582f6043efe633d3, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -152,7 +152,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1961610690977519182}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: FirePoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -194,7 +194,7 @@ GameObject:
   - component: {fileID: 851602040308380042}
   - component: {fileID: 916417473029488326}
   - component: {fileID: -1033697550846104536}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: RangeBat
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -329,7 +329,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 423326915
   m_SortingLayer: 4
-  m_SortingOrder: 5
+  m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -407,9 +407,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6899a3b679ef9257b8d361675b7b905, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyChaseMovement
-  _moveSpeed: 1.2
+  _moveSpeed: 0.4
   _detectionRange: 13
-  _stoppingDistance: 2
+  _stoppingDistance: 1
 --- !u!114 &851602040308380042
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -426,7 +426,7 @@ MonoBehaviour:
   _spriteRenderer: {fileID: 5544586414128239488}
   _defaultFacesRight: 1
   _deathFallbackDuration: 1
-  _attackReleaseFallbackDuration: 0.5
+  _attackReleaseFallbackDuration: 1
 --- !u!114 &916417473029488326
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -443,6 +443,9 @@ MonoBehaviour:
   _firePoint: {fileID: 1961610690977519182}
   _fireInterval: 4
   _detectionRange: 6
+  _lineOfSightBlockingLayers:
+    serializedVersion: 2
+    m_Bits: 256
 --- !u!114 &-1033697550846104536
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -169,6 +169,14 @@ public class DungeonManager : MonoBehaviour
 
             ApplyRandomRoomStyle();
             _cellQuery.Build(_currentLayout.Rooms);
+
+            // Must happen before SpawnDungeonVisuals() creates the new RoomControllers below —
+            // see RoomCamera.ResetTracking()'s doc comment for exactly why. In short: without
+            // this, a fresh RoomController can mistake RoomCamera's stale "current room" from the
+            // PREVIOUS dungeon (same GridPos, new room) as the player already standing in it,
+            // permanently locking that room's doors before the player ever actually entered.
+            RoomCamera.Instance?.ResetTracking();
+
             SpawnDungeonVisuals();
             _playerSpawner.CalculateSpawnPosition(_currentLayout.Rooms, _currentLayout.StartPosition);
             _playerSpawner.PositionPlayerAtSpawn();

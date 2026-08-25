@@ -22,6 +22,16 @@ using UnityEngine;
 /// should actually leave). If no Animator is assigned, or that event is never wired up, a
 /// fallback timer (_attackReleaseFallbackDuration) fires OnAttackReleased anyway, so
 /// EnemyRangedAttack is never left waiting forever for a projectile that should've launched.
+///
+/// FALLBACK TIMING VS. ANIMATOR SPEED: both fallback timers above run on Invoke(), which is
+/// wall-clock time and has no awareness of Animator.speed. A real Animation Event scales
+/// correctly with Animator.speed on its own (it fires based on normalized clip time, not a
+/// separate timer), but the fallback safety net doesn't — so if Animator.speed is set below 1
+/// (e.g. a slow-mo effect), the fallback would previously fire at its old real-time mark while
+/// the now-slower clip is still mid-playback, letting behavior (e.g. an enemy resuming movement)
+/// resume before the animation visually finishes. Both fallbacks now divide their configured
+/// duration by the Animator's current speed at the moment they're armed, so the safety net
+/// duration tracks however fast/slow the clip is actually set to play.
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class EnemyAnimator : MonoBehaviour
@@ -35,11 +45,11 @@ public class EnemyAnimator : MonoBehaviour
     [SerializeField] private bool _defaultFacesRight = true;
 
     [Header("Death")]
-    [Tooltip("Safety net only — used if no Animator is assigned, or the Death clip's Animation Event never calls OnDeathAnimationComplete().")]
+    [Tooltip("Safety net only — used if no Animator is assigned, or the Death clip's Animation Event never calls OnDeathAnimationComplete(). Measured at Animator.speed == 1; automatically scaled at runtime if speed differs (see class doc).")]
     [SerializeField] private float _deathFallbackDuration = 1f;
 
     [Header("Attack")]
-    [Tooltip("Safety net only — used if no Animator is assigned, or the Attack clip's Animation Event never calls OnAttackAnimationComplete(). Should be set a little longer than the Attack clip's actual release frame so the real event normally wins.")]
+    [Tooltip("Safety net only — used if no Animator is assigned, or the Attack clip's Animation Event never calls OnAttackAnimationComplete(). Should be set a little longer than the Attack clip's actual release frame (at Animator.speed == 1) so the real event normally wins. Automatically scaled at runtime if Animator.speed differs (see class doc).")]
     [SerializeField] private float _attackReleaseFallbackDuration = 0.5f;
 
     private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
@@ -110,7 +120,7 @@ public class EnemyAnimator : MonoBehaviour
         _animator.SetTrigger(AttackHash);
 
         CancelInvoke(nameof(FinishAttackRelease));
-        Invoke(nameof(FinishAttackRelease), Mathf.Max(0.01f, _attackReleaseFallbackDuration));
+        Invoke(nameof(FinishAttackRelease), Mathf.Max(0.01f, ScaledFallbackDuration(_attackReleaseFallbackDuration)));
     }
 
     /// <summary>Hook this up as an Animation Event on the Attack clip's release frame (the frame
@@ -142,7 +152,7 @@ public class EnemyAnimator : MonoBehaviour
         }
 
         _animator.SetTrigger(DieHash);
-        Invoke(nameof(FinishDeath), _deathFallbackDuration);
+        Invoke(nameof(FinishDeath), Mathf.Max(0.01f, ScaledFallbackDuration(_deathFallbackDuration)));
     }
 
     /// <summary>Hook this up as an Animation Event on the last frame of the Death clip.</summary>
@@ -158,5 +168,18 @@ public class EnemyAnimator : MonoBehaviour
         // CancelInvoke there already handles that, this just guards a direct double-call.
         CancelInvoke(nameof(FinishDeath));
         OnDeathAnimationFinished?.Invoke();
+    }
+
+    /// <summary>Scales a fallback duration (authored at Animator.speed == 1) by the Animator's
+    /// current speed, so slowing/speeding up playback (e.g. a slow-mo effect) doesn't leave the
+    /// fallback timer firing while the — now longer/shorter — real clip is still playing. Falls
+    /// back to 1x if speed is ~0 or negative (e.g. a paused Animator) to avoid a divide-by-zero
+    /// or negative Invoke delay.</summary>
+    private float ScaledFallbackDuration(float baseDuration)
+    {
+        if (_animator == null) return baseDuration;
+
+        float speed = Mathf.Abs(_animator.speed) > 0.0001f ? Mathf.Abs(_animator.speed) : 1f;
+        return baseDuration / speed;
     }
 }
