@@ -12,17 +12,31 @@ public class LoadingTextAnimator : MonoBehaviour
     [SerializeField] private float changeInterval = 0.5f;
 
     private int dotCount = 0;
+    private Coroutine _animateRoutine;
 
     void OnEnable()
     {
-        // Start the loop when the loading screen becomes active
-        StartCoroutine(AnimateDots());
+        if (_animateRoutine != null)
+        {
+            StopCoroutine(_animateRoutine);
+            _animateRoutine = null;
+        }
+
+        _animateRoutine = StartCoroutine(AnimateDots());
     }
 
     void OnDisable()
     {
-        // Stop the loop when the loading screen is hidden
-        StopAllCoroutines();
+        // Explicitly stop only the dot animation coroutine — never use StopAllCoroutines()
+        // because it kills ALL coroutines on this component, including unrelated ones.
+        if (_animateRoutine != null)
+        {
+            StopCoroutine(_animateRoutine);
+            _animateRoutine = null;
+        }
+
+        // Reset to 0 so the animation starts fresh when re-enabled (no dots visible).
+        dotCount = 0;
     }
 
     IEnumerator AnimateDots()

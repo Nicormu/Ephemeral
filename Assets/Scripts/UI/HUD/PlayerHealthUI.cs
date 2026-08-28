@@ -131,7 +131,7 @@ public class PlayerHealthUI : MonoBehaviour
             }
             else // HealPopping
             {
-                rt.localScale = Vector3.one * EaseOutBack(t);
+                rt.localScale = Vector3.one * AnimationEasings.EaseOutBack(t);
             }
 
             if (t >= 1f)
@@ -294,19 +294,4 @@ public class PlayerHealthUI : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Standard "ease out back" curve: overshoots past 1 before settling — gives the
-    /// heal pop a bit of springiness instead of a flat linear scale-in.
-    /// </summary>
-    private static float EaseOutBack(float t)
-    {
-        const float c1 = 1.70158f;
-        const float c3 = c1 + 1f;
-
-        float x = t - 1f;
-
-        return 1f +
-               c3 * (x * x * x) +
-               c1 * (x * x);
-    }
 }

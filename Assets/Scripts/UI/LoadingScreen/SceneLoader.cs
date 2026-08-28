@@ -7,9 +7,6 @@ public class SceneLoader : MonoBehaviour
     [Header("UI Reference")]
     [SerializeField] private GameObject loadingScreenCanvas;
 
-    [Header("Debug")]
-    [SerializeField] private bool logDebugMessages = false;
-
     private bool _isLoading;
 
     public bool IsLoading => _isLoading;
@@ -18,7 +15,7 @@ public class SceneLoader : MonoBehaviour
     {
         if (_isLoading)
         {
-            if (logDebugMessages) Debug.LogWarning($"[SceneLoader] Already loading — ignoring call to LoadNewScene(\"{sceneName}\")");
+            Debug.LogWarning($"[SceneLoader] Already loading — ignoring call to LoadNewScene(\"{sceneName}\")");
             return;
         }
 
@@ -35,8 +32,6 @@ public class SceneLoader : MonoBehaviour
     {
         _isLoading = true;
 
-        if (logDebugMessages) Debug.Log($"[SceneLoader] Starting load of \"{sceneName}\"");
-
         // Validate the canvas reference before doing anything.
         if (loadingScreenCanvas == null)
         {
@@ -48,8 +43,6 @@ public class SceneLoader : MonoBehaviour
 
         loadingScreenCanvas.SetActive(true);
 
-        if (logDebugMessages) Debug.Log("[SceneLoader] Loading screen shown");
-
         // Start loading the scene in the background.
         AsyncOperation operation = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
 
@@ -58,8 +51,6 @@ public class SceneLoader : MonoBehaviour
             // Scene is already fully loaded or is in the process of loading and has reached 90% progress.
             // Just set activation to true so it becomes playable immediately.
             operation.allowSceneActivation = true;
-            if (logDebugMessages) Debug.Log($"[SceneLoader] Scene \"{sceneName}\" was already loaded — activating.");
-
             loadingScreenCanvas.SetActive(false);
             _isLoading = false;
             yield break;
@@ -84,25 +75,19 @@ public class SceneLoader : MonoBehaviour
                 break; // give up — canvas will be cleaned up below via yield return null.
             }
 
-            // Log every 10% of real progress so we can spot hangs in the editor log.
             int currentProgress = (int)(operation.progress * 100);
             if (currentProgress != lastProgress && currentProgress % 10 == 0)
             {
-                if (logDebugMessages) Debug.Log($"[SceneLoader] Loading: {currentProgress}%");
+                Debug.Log($"[SceneLoader] Loading: {currentProgress}%");
                 lastProgress = currentProgress;
             }
 
             yield return null;
         }
 
-        // Optional: Wait a fraction of a second so the player sees the transition.
-        //yield return new WaitForSeconds(0.5f);
-
         // Activate the loaded scene.
         if (operation != null)
             operation.allowSceneActivation = true;
-
-        if (logDebugMessages) Debug.Log($"[SceneLoader] Scene \"{sceneName}\" activated");
 
         yield return null; // Allow one frame for Unity to settle the transition.
     }
