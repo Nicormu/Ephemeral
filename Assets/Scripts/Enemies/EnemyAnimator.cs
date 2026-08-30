@@ -84,6 +84,8 @@ public class EnemyAnimator : MonoBehaviour
 
     private void Update()
     {
+        if (_deathHandled) return; // frozen on the death pose — don't keep animating movement/facing over it
+
         if (_animator != null && _rb != null)
             _animator.SetBool(IsMovingHash, _rb.linearVelocity.sqrMagnitude > 0.01f);
 

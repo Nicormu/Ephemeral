@@ -6,6 +6,10 @@ using UnityEngine;
 /// hard detection boundary regardless of how large _detectionRange is set. Add this component to
 /// make an enemy "track" — omit it for a stationary enemy (e.g. a turret using only
 /// EnemyRangedAttack).
+///
+/// BUG FIX: chasing never checked whether the enemy was dead, so a bat still slid toward the
+/// player for the entire death animation before actually being destroyed. Guarded behind
+/// EnemyHealth.IsDead now, same pattern EnemyHazardDetector already uses.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(EnemyRoomGuard))]
@@ -21,15 +25,23 @@ public class EnemyChaseMovement : MonoBehaviour
 
     private Rigidbody2D _rb;
     private EnemyRoomGuard _roomGuard;
+    private EnemyHealth _health; // optional — enemies with no EnemyHealth just never get stopped on death
 
     private void Awake()
     {
         _rb = GetComponent<Rigidbody2D>();
         _roomGuard = GetComponent<EnemyRoomGuard>();
+        _health = GetComponent<EnemyHealth>();
     }
 
     private void FixedUpdate()
     {
+        if (_health != null && _health.IsDead)
+        {
+            _rb.linearVelocity = Vector2.zero;
+            return;
+        }
+
         if (PlayerMovement.Instance == null || !_roomGuard.IsPlayerInRoom)
         {
             _rb.linearVelocity = Vector2.zero;

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 1
   m_EditorClassIdentifier: Assembly-CSharp::RoomTemplateSO
   Type: 1
-  Doors: -1
+  Doors: 15
   ObstacleTypes:
   - {fileID: 11400000, guid: ea50fa3394c9ca8d3858b13e6ae00c68, type: 2}
   EnemySpawnPoints:

@@ -512,8 +512,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::YSortRenderer
   _spriteRenderer: {fileID: 711343906}
-  _orderOffset: 10
-  _sortReference: {fileID: 848111379}
+  _orderOffset: 0
+  _sortReference: {fileID: 711343902}
 --- !u!114 &711343904
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -595,9 +595,9 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: -424600661
-  m_SortingLayer: 3
-  m_SortingOrder: 10
+  m_SortingLayerID: -469821067
+  m_SortingLayer: 0
+  m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 1239637081, guid: 87e65928744b9d8ada9101927b138906, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -643,7 +643,7 @@ CapsuleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0.2}
+  m_Offset: {x: 0, y: 0.15}
   m_Size: {x: 0.45, y: 0.45}
   m_Direction: 0
 --- !u!1 &737983476
@@ -843,12 +843,13 @@ GameObject:
   m_Component:
   - component: {fileID: 848111379}
   - component: {fileID: 848111377}
-  - component: {fileID: 848111387}
+  - component: {fileID: 848111389}
   - component: {fileID: 848111380}
   - component: {fileID: 848111386}
   - component: {fileID: 848111382}
   - component: {fileID: 848111381}
   - component: {fileID: 848111388}
+  - component: {fileID: 848111390}
   m_Layer: 11
   m_Name: PlayerSpirit
   m_TagString: Untagged
@@ -954,8 +955,26 @@ MonoBehaviour:
   _maxHealth: 6
   _startingHealth: 6
   _invulnerabilityDuration: 0.5
---- !u!61 &848111387
-BoxCollider2D:
+--- !u!114 &848111388
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 848111375}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fc0201e4688eeafda22b975877af80a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeapon
+  _damage: 12
+  _attackRange: 1.2
+  _attackCooldown: 0.4
+  _knockbackPower: 3
+  _attackPoint: {fileID: 0}
+  _attackKey: 323
+--- !u!70 &848111389
+CapsuleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -989,18 +1008,9 @@ BoxCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  m_Size: {x: 0.46, y: 0.46}
-  m_EdgeRadius: 0
---- !u!114 &848111388
+  m_Size: {x: 0.46, y: 0.56}
+  m_Direction: 0
+--- !u!114 &848111390
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1009,15 +1019,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 848111375}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3fc0201e4688eeafda22b975877af80a, type: 3}
+  m_Script: {fileID: 11500000, guid: 65235ff93da814118835c14c3ce7537c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeapon
-  _damage: 12
-  _attackRange: 1.2
-  _attackCooldown: 0.4
-  _knockbackPower: 3
-  _attackPoint: {fileID: 0}
-  _attackKey: 323
+  m_EditorClassIdentifier: Assembly-CSharp::HitFlashEffect
+  _spriteRenderer: {fileID: 711343906}
+  _blinkInterval: 0.05
+  _dimAlpha: 0.3
 --- !u!1 &882481646
 GameObject:
   m_ObjectHideFlags: 0
@@ -1200,6 +1207,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DungeonResetController
   _resetKey: 114
   _fadeDuration: 0.5
+  _holdDuration: 1.5
+  _restartsBeforeFastHold: 3
+  _fastHoldDuration: 1
 --- !u!1 &997594115
 GameObject:
   m_ObjectHideFlags: 0
@@ -2169,8 +2179,8 @@ GameObject:
   - component: {fileID: 1679675734}
   - component: {fileID: 1679675736}
   - component: {fileID: 1679675737}
-  - component: {fileID: 1679675738}
   - component: {fileID: 1679675739}
+  - component: {fileID: 1679675740}
   m_Layer: 0
   m_Name: CanvasManager
   m_TagString: Untagged
@@ -2191,7 +2201,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
   loadingScreenCanvas: {fileID: 461475610}
-  logDebugMessages: 0
 --- !u!4 &1679675735
 Transform:
   m_ObjectHideFlags: 0
@@ -2250,23 +2259,6 @@ MonoBehaviour:
   _punchScaleAmount: 0.35
   _damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
   _healPopDuration: 0.25
---- !u!114 &1679675738
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1679675733}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2894215ab51c7420e94a9e124e0acf23, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerDeathScreen
-  _continueText: {fileID: 761809512}
-  _fadeDuration: 1
-  _inputDelayAfterFade: 0.3
-  _pulseScaleAmount: 0.04
-  _pulseCycleDuration: 3
 --- !u!114 &1679675739
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2280,6 +2272,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScreenFader
   _fadePanel: {fileID: 997594118}
+--- !u!114 &1679675740
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1679675733}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59d3fb82424a1752bb86fcdad9834cc1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerDeathScreen
+  _continueText: {fileID: 761809512}
+  _fadeDuration: 1
+  _inputDelayAfterFade: 0.3
+  _pulseScaleAmount: 0.005
+  _pulseCycleDuration: 1.2
 --- !u!1 &1720484477
 GameObject:
   m_ObjectHideFlags: 0

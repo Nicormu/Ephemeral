@@ -8,13 +8,26 @@ public class RoomTemplateSOEditor : Editor
 {
     private const float CellSize = 20f;
 
+    // Only these 4 bits are ever valid — anything else (notably -1 / "Everything", the value
+    // Unity's built-in EnumFlagsField widget can snap to even when every individual checkbox
+    // was ticked one by one) gets masked away by DoorsMask.
+    private const int DoorsMask = (int)(DoorDirection.North | DoorDirection.South | DoorDirection.East | DoorDirection.West);
+
     private enum PaintMode { Cells, EnemySpawnPoints }
     private PaintMode _paintMode = PaintMode.Cells;
     private int _activeObstacleType = 0;
 
     public override void OnInspectorGUI()
     {
-        DrawDefaultInspector();
+        serializedObject.Update();
+
+        // Draw every default field EXCEPT Doors — Doors gets its own toggle-based UI below
+        // instead of Unity's default flags widget, which is what causes the "Everything" (-1)
+        // corruption in the first place. See DrawDoorsField for details.
+        DrawPropertiesExcluding(serializedObject, "Doors");
+        DrawDoorsField();
+
+        serializedObject.ApplyModifiedProperties();
 
         var template = (RoomTemplateSO)target;
 
@@ -38,6 +51,84 @@ public class RoomTemplateSOEditor : Editor
 
         if (_paintMode == PaintMode.EnemySpawnPoints)
             DrawVoidSpawnPointWarnings(template);
+    }
+
+    /// <summary>
+    /// Custom replacement for the default [Flags] enum widget. Unity's built-in EnumFlagsField
+    /// (what DrawDefaultInspector() renders for the Doors property) can write -1 ("Everything")
+    /// to the serialized int the instant every individually-representable flag happens to be
+    /// selected — even if you ticked each checkbox one at a time and never touched an
+    /// "Everything" entry yourself. That -1 then fails RoomTemplate.FromSO's validity check
+    /// (any bits outside North|South|East|West), which is what produced the warning you saw.
+    ///
+    /// This draws 4 plain toggles bound directly to the individual bits, so the serialized value
+    /// can only ever be some combination of 1/2/4/8 — never -1. It also SELF-HEALS: if this
+    /// asset already has a corrupted -1 stored (from before this fix), the moment this Inspector
+    /// draws, `sanitized` masks it back down to the correct value and immediately writes it back
+    /// via doorsProp.intValue below — so just selecting the asset once in the Project window
+    /// permanently fixes it (see the batch menu command further down for fixing many at once
+    /// without opening each one).
+    /// </summary>
+    private void DrawDoorsField()
+    {
+        var doorsProp = serializedObject.FindProperty("Doors");
+        if (doorsProp == null) return;
+
+        int current = doorsProp.intValue & DoorsMask; // sanitize on every draw — heals old -1 values
+
+        EditorGUILayout.LabelField("Doors", EditorStyles.boldLabel);
+        EditorGUILayout.BeginHorizontal();
+        current = ToggleFlag(current, (int)DoorDirection.North, "North");
+        current = ToggleFlag(current, (int)DoorDirection.South, "South");
+        current = ToggleFlag(current, (int)DoorDirection.East, "East");
+        current = ToggleFlag(current, (int)DoorDirection.West, "West");
+        EditorGUILayout.EndHorizontal();
+
+        doorsProp.intValue = current;
+    }
+
+    private int ToggleFlag(int current, int flag, string label)
+    {
+        bool has = (current & flag) != 0;
+        bool newVal = EditorGUILayout.ToggleLeft(label, has, GUILayout.Width(65));
+        return newVal ? (current | flag) : (current & ~flag);
+    }
+
+    /// <summary>
+    /// One-click fix for every RoomTemplateSO in the project at once — no need to open each
+    /// asset in the Inspector individually to trigger the self-heal in DrawDoorsField above.
+    /// </summary>
+    [MenuItem("Tools/Dungeon/Fix Corrupted Door Masks On All Room Templates")]
+    private static void FixAllDoorMasks()
+    {
+        string[] guids = AssetDatabase.FindAssets("t:RoomTemplateSO");
+        int fixedCount = 0;
+
+        foreach (var guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            var so = AssetDatabase.LoadAssetAtPath<RoomTemplateSO>(path);
+            if (so == null) continue;
+
+            int sanitized = (int)so.Doors & DoorsMask;
+            if (sanitized != (int)so.Doors)
+            {
+                Undo.RecordObject(so, "Fix Door Mask");
+                so.Doors = (DoorDirection)sanitized;
+                EditorUtility.SetDirty(so);
+                fixedCount++;
+            }
+        }
+
+        if (fixedCount > 0)
+        {
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[RoomTemplateSOEditor] Fixed {fixedCount} RoomTemplateSO asset(s) with a corrupted Doors mask.");
+        }
+        else
+        {
+            Debug.Log("[RoomTemplateSOEditor] No RoomTemplateSO assets needed fixing — all Doors masks were already valid.");
+        }
     }
 
     private void DrawObstaclePalette(RoomTemplateSO template)

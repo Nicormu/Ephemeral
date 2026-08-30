@@ -25,8 +25,20 @@ public class HealthComponent : MonoBehaviour
     public bool IsInvulnerable => Time.time - _lastDamageTime < _invulnerabilityDuration;
     public bool IsDead => _currentHealth <= 0;
 
+    /// <summary>How long invulnerability lasts after a hit, in seconds. Exposed so visual
+    /// feedback (e.g. HitFlashEffect) can exactly match the window during which this entity
+    /// genuinely can't be hit again, instead of using a separately-tuned duration that could
+    /// drift out of sync.</summary>
+    public float InvulnerabilityDuration => _invulnerabilityDuration;
+
     public event Action<int, int> OnHealthChanged; // (current, max)
     public event Action OnDied;
+
+    /// <summary>Fired only when a hit actually applies damage — i.e. the same guard TakeDamage
+    /// already uses (not dead, not invulnerable, amount > 0). Unlike OnHealthChanged, this never
+    /// fires on healing, so listeners that only care about "was just hit" (e.g. HitFlashEffect)
+    /// don't need to diff old/new health themselves. Passes the amount actually applied.</summary>
+    public event Action<int> OnDamaged;
 
     private void Awake()
     {
@@ -46,7 +58,7 @@ public class HealthComponent : MonoBehaviour
     }
 
     /// <summary>
-    /// Apply damage with invulnerability guard. Raises OnHealthChanged and possibly OnDied.
+    /// Apply damage with invulnerability guard. Raises OnDamaged, OnHealthChanged and possibly OnDied.
     /// </summary>
     public void TakeDamage(int amount)
     {
@@ -54,6 +66,8 @@ public class HealthComponent : MonoBehaviour
 
         _currentHealth = Mathf.Max(0, _currentHealth - amount);
         _lastDamageTime = Time.time;
+
+        OnDamaged?.Invoke(amount);
         OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
 
         if (_currentHealth <= 0)

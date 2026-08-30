@@ -20,6 +20,11 @@ using UnityEngine;
 /// Implements IEnemyResettable so EnemyRoomGuard clears the fire cooldown AND cancels any
 /// in-progress windup on reset — otherwise an enemy reset mid-windup could still fire a shot from
 /// its old position/target once the (now-stale) OnAttackReleased event eventually arrives.
+///
+/// BUG FIX: neither the "start a new attack" check nor the windup-release handler looked at
+/// EnemyHealth.IsDead, so an enemy that died mid-windup could still fire a shot during its death
+/// animation, and a fresh windup could even start while already dead. Both are now guarded —
+/// same pattern EnemyChaseMovement/EnemyHazardDetector use.
 /// </summary>
 [RequireComponent(typeof(EnemyRoomGuard))]
 [RequireComponent(typeof(EnemyAnimator))]
@@ -38,6 +43,7 @@ public class EnemyRangedAttack : MonoBehaviour, IEnemyResettable
 
     private EnemyRoomGuard _roomGuard;
     private EnemyAnimator _enemyAnimator;
+    private EnemyHealth _health; // optional — enemies with no EnemyHealth just never get gated on death
     private Rigidbody2D _rb; // optional — used to stop residual motion the instant windup starts
     private EnemyChaseMovement _chaseMovement; // optional — null for stationary turret-style enemies
     private float _lastFireTime = -999f;
@@ -47,6 +53,7 @@ public class EnemyRangedAttack : MonoBehaviour, IEnemyResettable
     {
         _roomGuard = GetComponent<EnemyRoomGuard>();
         _enemyAnimator = GetComponent<EnemyAnimator>();
+        _health = GetComponent<EnemyHealth>();
         _rb = GetComponent<Rigidbody2D>();
         _chaseMovement = GetComponent<EnemyChaseMovement>();
     }
@@ -66,6 +73,7 @@ public class EnemyRangedAttack : MonoBehaviour, IEnemyResettable
     private void Update()
     {
         if (_isWindingUp) return; // already committed to this attack cycle
+        if (_health != null && _health.IsDead) return;
         if (PlayerMovement.Instance == null || _projectilePrefab == null) return;
         if (!_roomGuard.IsPlayerInRoom) return;
         if (Time.time - _lastFireTime < _fireInterval) return;
@@ -98,7 +106,8 @@ public class EnemyRangedAttack : MonoBehaviour, IEnemyResettable
     /// still in range/room/line-of-sight before actually firing, since time has passed since
     /// StartAttack() and they may have fled, left mid-windup, or ducked behind something. Guarded
     /// by _isWindingUp so a stray/late event after a reset (see ResetEnemyState) can't fire a
-    /// shot from stale state.</summary>
+    /// shot from stale state. Also re-checks IsDead — a windup that started before the killing
+    /// blow landed shouldn't still launch a projectile once the death animation is playing.</summary>
     private void HandleAttackReleased()
     {
         if (!_isWindingUp) return;
@@ -107,6 +116,7 @@ public class EnemyRangedAttack : MonoBehaviour, IEnemyResettable
         // Windup is over either way — hand movement back.
         if (_chaseMovement != null) _chaseMovement.enabled = true;
 
+        if (_health != null && _health.IsDead) return;
         if (PlayerMovement.Instance == null || !_roomGuard.IsPlayerInRoom) return;
 
         Vector3 origin = _firePoint != null ? _firePoint.position : transform.position;
