@@ -3,10 +3,12 @@ using UnityEngine;
 
 /// <summary>
 /// Flow:
-///   1. Exit button calls ShowConfirmation() — shows the "Are you sure?" panel.
-///   2. Yes button calls ConfirmExit() — hides the panel, plays the eyelid-close animation,
+///   1. Exit button calls ShowConfirmation() — fades in the "Are you sure?" popup (see
+///      UIPopupPanel). Clicking outside it (see UIPopupBackdrop on its backdrop child) closes it
+///      the same as pressing "No".
+///   2. Yes button calls ConfirmExit() — fades the popup out, plays the eyelid-close animation,
 ///      then quits.
-///   3. No button calls CancelExit() — just hides the panel, nothing else happens.
+///   3. No button calls CancelExit() — fades the popup out, nothing else happens.
 ///
 /// The eyelid animation is driven entirely in code: two black UI panels (top/bottom) grow from
 /// height 0 to fully covering the screen, meeting in the middle like closing eyelids.
@@ -14,8 +16,8 @@ using UnityEngine;
 public class ExitMenu : MonoBehaviour
 {
     [Header("Confirmation UI")]
-    [Tooltip("The 'Are you sure you want to exit?' panel. Should start inactive in the scene.")]
-    [SerializeField] private GameObject _confirmationPanel;
+    [Tooltip("The 'Are you sure you want to exit?' popup. Needs a CanvasGroup + UIPopupPanel on its root (see UIPopupPanel.cs).")]
+    [SerializeField] private UIPopupPanel _confirmationPopup;
 
     [Header("Eyelid Animation")]
     [Tooltip("Parent GameObject holding both eyelid Images. Should start inactive in the scene.")]
@@ -40,7 +42,6 @@ public class ExitMenu : MonoBehaviour
 
     private void Awake()
     {
-        if (_confirmationPanel != null) _confirmationPanel.SetActive(false);
         if (_eyelidOverlay != null) _eyelidOverlay.SetActive(false);
 
         if (_topEyelid != null) SetEyelidHeight(_topEyelid, 0f);
@@ -54,22 +55,23 @@ public class ExitMenu : MonoBehaviour
     {
         if (_isClosing) return; // already quitting — ignore stray clicks
 
-        if (_confirmationPanel == null)
+        if (_confirmationPopup == null)
         {
-            Debug.LogWarning("[Exit] No confirmation panel assigned — quitting immediately instead.");
+            Debug.LogWarning("[Exit] No confirmation popup assigned — quitting immediately instead.");
             ConfirmExit();
             return;
         }
 
-        _confirmationPanel.SetActive(true);
+        _confirmationPopup.Show();
     }
 
     /// <summary>
-    /// Call from the confirmation panel's "No" / cancel button.
+    /// Call from the confirmation panel's "No" / cancel button. Also reached automatically via
+    /// UIPopupBackdrop when the player clicks outside the popup.
     /// </summary>
     public void CancelExit()
     {
-        if (_confirmationPanel != null) _confirmationPanel.SetActive(false);
+        if (_confirmationPopup != null) _confirmationPopup.Hide();
     }
 
     /// <summary>
@@ -79,7 +81,7 @@ public class ExitMenu : MonoBehaviour
     {
         if (_isClosing) return;
 
-        if (_confirmationPanel != null) _confirmationPanel.SetActive(false);
+        if (_confirmationPopup != null) _confirmationPopup.Hide();
 
         StartCoroutine(PlayEyelidCloseThenQuit());
     }

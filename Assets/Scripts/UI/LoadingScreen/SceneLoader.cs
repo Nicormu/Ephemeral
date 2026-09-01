@@ -7,6 +7,10 @@ public class SceneLoader : MonoBehaviour
     [Header("UI Reference")]
     [SerializeField] private GameObject loadingScreenCanvas;
 
+    [Header("Curtain Transition")]
+    [Tooltip("Lateral ouroboros curtain on THIS scene's Canvas Manager. Only Close() is used here — reopening is handled independently by the new scene's own curtain (Open On Start), since this object is destroyed the moment the new scene activates. Leave empty to skip the curtain entirely.")]
+    [SerializeField] private LateralOuroborosCurtain _curtain;
+
     private bool _isLoading;
 
     public bool IsLoading => _isLoading;
@@ -32,7 +36,6 @@ public class SceneLoader : MonoBehaviour
     {
         _isLoading = true;
 
-        // Validate the canvas reference before doing anything.
         if (loadingScreenCanvas == null)
         {
             Debug.LogError("[SceneLoader] loadingScreenCanvas is not assigned! "
@@ -43,28 +46,18 @@ public class SceneLoader : MonoBehaviour
 
         loadingScreenCanvas.SetActive(true);
 
-        // Start loading the scene in the background.
+        bool curtainClosed = _curtain == null;
+        if (_curtain != null)
+            _curtain.Close(() => curtainClosed = true);
+
         AsyncOperation operation = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
-
-        if (operation.isDone || operation.progress >= 0.9f)
-        {
-            // Scene is already fully loaded or is in the process of loading and has reached 90% progress.
-            // Just set activation to true so it becomes playable immediately.
-            operation.allowSceneActivation = true;
-            loadingScreenCanvas.SetActive(false);
-            _isLoading = false;
-            yield break;
-        }
-
-        // Prevent the scene from instantly activating when it finishes loading.
         operation.allowSceneActivation = false;
 
-        // Keep updating while the scene is still loading.
         int lastProgress = 0;
-        float timeout = 120f; // safety net — give up after 2 minutes to avoid infinite loops.
+        float timeout = 120f;
         float elapsed = 0f;
 
-        while (operation.progress < 0.9f)
+        while (operation.progress < 0.9f || !curtainClosed)
         {
             elapsed += Time.unscaledDeltaTime;
             if (elapsed >= timeout)
@@ -72,7 +65,7 @@ public class SceneLoader : MonoBehaviour
                 Debug.LogError($"[SceneLoader] Timeout after {timeout}s waiting for \"{sceneName}\" "
                     + $"to reach 0.9 progress (current: {operation.progress:F2}). "
                     + "Is the scene in Build Settings?");
-                break; // give up — canvas will be cleaned up below via yield return null.
+                break;
             }
 
             int currentProgress = (int)(operation.progress * 100);
@@ -85,10 +78,8 @@ public class SceneLoader : MonoBehaviour
             yield return null;
         }
 
-        // Activate the loaded scene.
-        if (operation != null)
-            operation.allowSceneActivation = true;
-
-        yield return null; // Allow one frame for Unity to settle the transition.
+        // From here, this scene (and this coroutine's object) is about to be destroyed —
+        // the new scene's own Loading Canvas curtain (Open On Start) takes over from here.
+        operation.allowSceneActivation = true;
     }
 }

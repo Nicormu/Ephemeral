@@ -28,7 +28,7 @@ Ephemeral is currently in an early alpha stage. Core gameplay is under active de
 
 The current build focuses primarily on **procedural mine generation**: randomly generated layouts, room connections with proper doors, floor and wall tiles, environmental decorations, obstacles, and an animated player character.
 
-**Still in progress:** combat, boss encounters, and the memory/story system.
+**Still in progress:** boss encounters, and the memory/story system.
 
 ## The idea
 
