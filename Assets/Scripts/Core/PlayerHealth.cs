@@ -1,12 +1,12 @@
 using UnityEngine;
 
 /// <summary>
-/// Player health — wraps HealthComponent and exposes singleton access + healing.
+/// Player health - wraps HealthComponent and exposes singleton access + healing.
 /// </summary>
 [RequireComponent(typeof(HealthComponent))]
 public class PlayerHealth : MonoBehaviour
 {
-    public static PlayerHealth Instance { get; private set; }
+    public static PlayerHealth Instance { get; private set; } 
 
     private HealthComponent _health;
 
@@ -20,14 +20,29 @@ public class PlayerHealth : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        {
+            Debug.LogWarning($"[PlayerHealth] Another instance of PlayerHealth already exists. Destroying this one.");
+            Destroy(this);
+            return;
+        }
+
         Instance = this;
         _health = GetComponent<HealthComponent>();
     }
 
-    private void OnDisable()
+        /// <summary>
+    /// Singleton cleanup lives in OnDestroy, not OnDisable — mirrors PlayerMovement.Instance's
+    /// same fix. If anything ever disables this component instead of destroying it (e.g. a
+    /// future "invulnerable while disabled" trick), Instance must stay valid so every system
+    /// reading PlayerHealth.Instance (UI, hazard detector, death screen, weapons...) keeps
+    /// working. Only Awake() sets Instance, so there's no re-registration path on re-enable —
+    /// nulling it in OnDisable would leave it permanently null until re-enabled.
+    /// </summary>
+    private void OnDestroy()
     {
-        if (Instance == this) Instance = null;
+        if (Instance == this)
+            Instance = null;
     }
 
     /// <summary>

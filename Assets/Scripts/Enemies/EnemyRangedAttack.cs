@@ -13,9 +13,9 @@ using UnityEngine;
 /// shoot" enemy both use this same component.
 ///
 /// STAYING STILL WHILE FIRING: if this enemy also has an EnemyChaseMovement component, it's
-/// disabled (and the Rigidbody2D's velocity zeroed) for the entire windup, then re-enabled once
-/// the attack resolves (fired, cancelled, or reset) — same disable/re-enable pattern
-/// EnemyKnockback already uses to stop chase logic from fighting a knockback impulse.
+/// suppressed (via RequestSuppress()/ReleaseSuppress() — see EnemyChaseMovement's class doc for
+/// why this replaced directly toggling `enabled`) and the Rigidbody2D's velocity zeroed for the
+/// entire windup, then released once the attack resolves (fired, cancelled, or reset).
 ///
 /// Implements IEnemyResettable so EnemyRoomGuard clears the fire cooldown AND cancels any
 /// in-progress windup on reset — otherwise an enemy reset mid-windup could still fire a shot from
@@ -93,9 +93,9 @@ public class EnemyRangedAttack : MonoBehaviour, IEnemyResettable
         _isWindingUp = true;
         _lastFireTime = Time.time;
 
-        // Stay still for the whole windup — same mechanism EnemyKnockback uses to stop chase
-        // logic from immediately overwriting velocity on the next physics step.
-        if (_chaseMovement != null) _chaseMovement.enabled = false;
+        // Stay still for the whole windup — see class doc on why this uses RequestSuppress()
+        // instead of toggling _chaseMovement.enabled directly.
+        if (_chaseMovement != null) _chaseMovement.RequestSuppress();
         if (_rb != null) _rb.linearVelocity = Vector2.zero;
 
         _enemyAnimator.PlayAttack();
@@ -114,7 +114,7 @@ public class EnemyRangedAttack : MonoBehaviour, IEnemyResettable
         _isWindingUp = false;
 
         // Windup is over either way — hand movement back.
-        if (_chaseMovement != null) _chaseMovement.enabled = true;
+        if (_chaseMovement != null) _chaseMovement.ReleaseSuppress();
 
         if (_health != null && _health.IsDead) return;
         if (PlayerMovement.Instance == null || !_roomGuard.IsPlayerInRoom) return;
@@ -151,14 +151,14 @@ public class EnemyRangedAttack : MonoBehaviour, IEnemyResettable
     }
 
     /// <summary>Called by EnemyRoomGuard on reset, and by EnemyHealth on death — clears the fire
-    /// cooldown, marks any in-progress windup as cancelled, and hands movement back in case a
-    /// reset interrupts a windup mid-flight.</summary>
+    /// cooldown, marks any in-progress windup as cancelled, and releases the chase suppression in
+    /// case a reset interrupts a windup mid-flight.</summary>
     public void ResetEnemyState()
     {
         _lastFireTime = -999f;
 
         if (_isWindingUp && _chaseMovement != null)
-            _chaseMovement.enabled = true;
+            _chaseMovement.ReleaseSuppress();
 
         _isWindingUp = false;
     }

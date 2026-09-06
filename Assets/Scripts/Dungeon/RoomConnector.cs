@@ -34,7 +34,7 @@ public static class RoomConnector
             {
                 if ((room.Doors & dir) == 0) continue;
 
-                Vector2Int neighborPos = room.GridPos + DirectionOffset(dir, room.Width, room.Height);
+                Vector2Int neighborPos = room.GridPos + DungeonGeometry.DirectionOffset(dir, room.Width, room.Height);
                 if (posToIndex.TryGetValue(neighborPos, out int neighborIdx) && !visited[neighborIdx])
                 {
                     visited[neighborIdx] = true;
@@ -57,16 +57,6 @@ public static class RoomConnector
 
         return allConnected;
     }
-
-    // Neighbor is at (width/height + RoomGap) since rooms leave empty space between them.
-    private static Vector2Int DirectionOffset(DoorDirection dir, int width, int height) => dir switch
-    {
-        DoorDirection.North => new Vector2Int(0, height + DungeonGridConstants.RoomGap),
-        DoorDirection.South => new Vector2Int(0, -(height + DungeonGridConstants.RoomGap)),
-        DoorDirection.East  => new Vector2Int(width + DungeonGridConstants.RoomGap, 0),
-        DoorDirection.West  => new Vector2Int(-(width + DungeonGridConstants.RoomGap), 0),
-        _ => Vector2Int.zero
-    };
 
     private static int FindStartRoom(IReadOnlyList<Room> rooms)
     {

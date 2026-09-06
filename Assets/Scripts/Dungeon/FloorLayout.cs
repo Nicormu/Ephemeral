@@ -114,7 +114,7 @@ public static class FloorLayout
             {
                 if (cells.Count >= targetRooms) break;
 
-                Vector2Int newCell = current.Cell + UnitOffset(dir);
+                Vector2Int newCell = current.Cell + DungeonGeometry.UnitOffset(dir);
 
                 if (cells.ContainsKey(newCell)) continue;
                 if (rng.NextDouble() < SkipChance) continue;
@@ -164,7 +164,7 @@ public static class FloorLayout
 
             CellNode fromNode = candidates[rng.Next(candidates.Count)];
             DoorDirection dir = ShuffledDirections(rng)[0];
-            Vector2Int newCell = fromNode.Cell + UnitOffset(dir);
+            Vector2Int newCell = fromNode.Cell + DungeonGeometry.UnitOffset(dir);
 
             if (cells.ContainsKey(newCell)) continue;
             if (CountOccupiedNeighbors(newCell, cells) > 1) continue;
@@ -185,7 +185,7 @@ public static class FloorLayout
     {
         foreach (var dir in AllDirections)
         {
-            if (cells.TryGetValue(cell + UnitOffset(dir), out var neighbor) &&
+            if (cells.TryGetValue(cell + DungeonGeometry.UnitOffset(dir), out var neighbor) &&
                 (neighbor.Type == RoomType.Boss || neighbor.Type == RoomType.Treasure))
                 return true;
         }
@@ -198,7 +198,7 @@ public static class FloorLayout
         {
             DoorDirection doors = DoorDirection.None;
             foreach (var dir in AllDirections)
-                if (cells.ContainsKey(kv.Key + UnitOffset(dir)))
+                if (cells.ContainsKey(kv.Key + DungeonGeometry.UnitOffset(dir)))
                     doors |= dir;
 
             kv.Value.Doors = doors;
@@ -337,20 +337,11 @@ public static class FloorLayout
         return dirs;
     }
 
-    private static Vector2Int UnitOffset(DoorDirection dir) => dir switch
-    {
-        DoorDirection.North => new Vector2Int(0, 1),
-        DoorDirection.South => new Vector2Int(0, -1),
-        DoorDirection.East  => new Vector2Int(1, 0),
-        DoorDirection.West  => new Vector2Int(-1, 0),
-        _ => Vector2Int.zero
-    };
-
     private static int CountOccupiedNeighbors(Vector2Int cell, Dictionary<Vector2Int, CellNode> cells)
     {
         int count = 0;
         foreach (var dir in AllDirections)
-            if (cells.ContainsKey(cell + UnitOffset(dir)))
+            if (cells.ContainsKey(cell + DungeonGeometry.UnitOffset(dir)))
                 count++;
         return count;
     }

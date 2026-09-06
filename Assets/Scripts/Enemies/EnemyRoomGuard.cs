@@ -39,6 +39,13 @@ public class EnemyRoomGuard : MonoBehaviour
     /// EnemyRangedAttack should gate their existing distance checks behind this.</summary>
     public bool IsPlayerInRoom => _playerInRoom;
 
+    /// <summary>This enemy's owner room's data (GridPos/Width/Height/Cells/etc.), exposed so
+    /// grounded pathfinding (EnemyChaseMovement's _avoidsObstacles mode) can bound its BFS search
+    /// to the enemy's own room without needing a second separate reference to RoomController.
+    /// Null if this enemy has no RoomController in its parent hierarchy (see the Awake() warning
+    /// below) — callers should treat null the same as "no path available".</summary>
+    public Room? OwnerRoomData => _ownerRoom != null ? _ownerRoom.RoomData : (Room?)null;
+
     private void Awake()
     {
         _rb = GetComponent<Rigidbody2D>(); // optional — enemies without one just skip velocity reset
