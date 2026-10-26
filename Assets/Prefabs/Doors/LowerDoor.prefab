@@ -181,7 +181,10 @@ MonoBehaviour:
   _animator: {fileID: 7110894906947976194}
   _openTriggerName: OpenTrigger
   _closeTriggerName: CloseTrigger
+  _colliderFallbackDuration: 0.5
   _entryTrigger: {fileID: 429757491118734773}
+  _openSound: {fileID: 11400000, guid: 9cbad200f0147c20b9d594a1eb2850b1, type: 2}
+  _closeSound: {fileID: 11400000, guid: 9cbad200f0147c20b9d594a1eb2850b1, type: 2}
 --- !u!1 &7626254044880138289
 GameObject:
   m_ObjectHideFlags: 0

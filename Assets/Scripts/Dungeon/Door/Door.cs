@@ -50,6 +50,10 @@ public class Door : MonoBehaviour
     [Tooltip("Child object (with an isTrigger Collider2D + DoorEntryTrigger) positioned half a tile past this door's own tile, toward the gap. Detects the player crossing the threshold while the door is open. Leave empty if this door shouldn't teleport (e.g. a decorative door).")]
     [SerializeField] private Transform _entryTrigger;
 
+    [Header("Audio")]
+    [SerializeField] private SoundSO _openSound;
+    [SerializeField] private SoundSO _closeSound;
+
     private Collider2D _collider;
     private RoomController _roomA;
     private RoomController _roomB;
@@ -110,6 +114,8 @@ public class Door : MonoBehaviour
         if (IsOpen) return;
         IsOpen = true;
 
+        SFXManager.Instance?.Play(_openSound);
+
         if (_animator != null && !instant)
         {
             _animator.enabled = true; // Ensure Animator is running
@@ -135,6 +141,8 @@ public class Door : MonoBehaviour
     {
         if (!IsOpen && !instant) return;
         IsOpen = false;
+
+        SFXManager.Instance?.Play(_closeSound);
 
         // Cancel any pending open-collider fallback from a previous Open() — otherwise a stale
         // Invoke could later re-disable the collider after Close() has already correctly
