@@ -1223,8 +1223,9 @@ GameObject:
   - component: {fileID: 848111381}
   - component: {fileID: 848111388}
   - component: {fileID: 848111390}
+  - component: {fileID: 848111391}
   m_Layer: 11
-  m_Name: PlayerSpirit
+  m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1346,6 +1347,8 @@ MonoBehaviour:
   _knockbackPower: 3
   _attackPoint: {fileID: 0}
   _attackKey: 323
+  _swingSound: {fileID: 0}
+  _hitSound: {fileID: 0}
 --- !u!70 &848111389
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
@@ -1398,6 +1401,20 @@ MonoBehaviour:
   _spriteRenderer: {fileID: 711343906}
   _blinkInterval: 0.05
   _dimAlpha: 0.3
+--- !u!114 &848111391
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 848111375}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c97eb3cf1b9c1b07a8db877938db0f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthSoundEffect
+  _hurtSound: {fileID: 0}
+  _deathSound: {fileID: 0}
 --- !u!1 &967368261
 GameObject:
   m_ObjectHideFlags: 0
@@ -3608,5 +3625,5 @@ SceneRoots:
   - {fileID: 967368263}
   - {fileID: 1679675735}
   - {fileID: 1588157723}
-  - {fileID: 8897620870146360308}
   - {fileID: 283222147}
+  - {fileID: 8897620870146360308}

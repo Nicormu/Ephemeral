@@ -25,6 +25,9 @@ using UnityEngine;
 /// EnemyHealth.IsDead, so an enemy that died mid-windup could still fire a shot during its death
 /// animation, and a fresh windup could even start while already dead. Both are now guarded —
 /// same pattern EnemyChaseMovement/EnemyHazardDetector use.
+///
+/// AUDIO: _fireSound plays in Fire(), i.e. at the moment the projectile actually leaves — not at
+/// the start of the windup — so a cancelled/interrupted attack never makes a shot sound.
 /// </summary>
 [RequireComponent(typeof(EnemyRoomGuard))]
 [RequireComponent(typeof(EnemyAnimator))]
@@ -38,6 +41,10 @@ public class EnemyRangedAttack : MonoBehaviour, IEnemyResettable
     [Header("Line of Sight")]
     [Tooltip("Physics2D layers checked between the enemy and the player before winding up AND before releasing a shot. Should include your wall-collision layer and any BLOCKING obstacle layer (e.g. \"Default\" + \"Obstacle\"). Do NOT include layers used by walkable/trigger hazards (fire, spikes), the Player, enemies, projectiles, or FlyingEntity — a shot should still fire over/through those.")]
     [SerializeField] private LayerMask _lineOfSightBlockingLayers;
+
+    [Header("Audio")]
+    [Tooltip("Played when the projectile actually leaves this enemy. Leave empty for no sound.")]
+    [SerializeField] private SoundSO _fireSound;
 
     private static readonly RaycastHit2D[] _losHitsBuffer = new RaycastHit2D[1];
 
@@ -148,6 +155,8 @@ public class EnemyRangedAttack : MonoBehaviour, IEnemyResettable
         var projectile = instance.GetComponent<Projectile>();
         if (projectile != null)
             projectile.Launch(direction);
+
+        SFXManager.Instance?.Play(_fireSound);
     }
 
     /// <summary>Called by EnemyRoomGuard on reset, and by EnemyHealth on death — clears the fire

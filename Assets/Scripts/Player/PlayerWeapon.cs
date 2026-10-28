@@ -6,6 +6,9 @@ using UnityEngine;
 /// facing/direction logic yet, since there's no attack animation to sync to). Gated by
 /// _attackCooldown so holding/mashing the input doesn't spam damage every frame.
 ///
+/// Audio: _swingSound plays on every attack; _hitSound plays once per attack, only if at least
+/// one enemy actually took damage.
+///
 /// This is deliberately minimal so the game is playable today — swap it out later for a real
 /// melee swing hitbox, a projectile, weapon animations, etc. EnemyHealth.TakeDamage is the same
 /// entry point any future weapon system should call, so nothing else needs to change when you do.
@@ -30,6 +33,13 @@ public class PlayerWeapon : MonoBehaviour
     [Tooltip("Key/button that triggers an attack.")]
     [SerializeField] private KeyCode _attackKey = KeyCode.Mouse0;
 
+    [Header("Audio")]
+    [Tooltip("Played every time an attack is performed, whether or not it hits anything.")]
+    [SerializeField] private SoundSO _swingSound;
+
+    [Tooltip("Played once per attack, only if at least one enemy actually took damage. Leave empty if the enemy's own hurt sound (HealthSoundEffect) already works as impact feedback.")]
+    [SerializeField] private SoundSO _hitSound;
+
     private float _lastAttackTime = -999f;
 
     private void Awake()
@@ -49,13 +59,26 @@ public class PlayerWeapon : MonoBehaviour
     {
         _lastAttackTime = Time.time;
 
+        SFXManager.Instance?.Play(_swingSound);
+
+        bool hitAnyEnemy = false;
+
         Collider2D[] hits = Physics2D.OverlapCircleAll(_attackPoint.position, _attackRange);
         foreach (var hit in hits)
         {
             var enemyHealth = hit.GetComponent<EnemyHealth>();
-            if (enemyHealth != null)
-                enemyHealth.TakeDamage(_damage, _attackPoint.position, _knockbackPower);
+            if (enemyHealth == null) continue;
+
+            // Same conditions HealthComponent.TakeDamage uses to ignore a hit — checking here
+            // lets us know whether this hit will really land, so _hitSound only plays on real hits.
+            if (enemyHealth.IsDead || enemyHealth.IsInvulnerable) continue;
+
+            enemyHealth.TakeDamage(_damage, _attackPoint.position, _knockbackPower);
+            hitAnyEnemy = true;
         }
+
+        if (hitAnyEnemy)
+            SFXManager.Instance?.Play(_hitSound);
     }
 
     private void OnDrawGizmosSelected()

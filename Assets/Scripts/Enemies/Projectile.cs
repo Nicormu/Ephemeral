@@ -4,6 +4,10 @@ using UnityEngine;
 /// Straight-line projectile fired by EnemyRangedAttack. Damages the player on contact and
 /// self-destructs on hit or after _lifetime seconds (so a shot that never hits anything doesn't
 /// live forever).
+///
+/// AUDIO: _impactSound plays when the projectile hits the player or a wall — not when it simply
+/// expires from _lifetime. SFXManager plays it through its own AudioSource pool, so the sound
+/// keeps playing even though this GameObject is destroyed right after.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -15,6 +19,10 @@ public class Projectile : MonoBehaviour
 
     [Tooltip("Physics2D Layer this projectile is forced onto at spawn — must have collision with itself DISABLED in Project Settings > Physics 2D > Layer Collision Matrix, so two projectiles never trigger against each other. Create this layer first (it can't be created from script).")]
     [SerializeField] private string _projectileLayerName = "Projectile";
+
+    [Header("Audio")]
+    [Tooltip("Played when this projectile hits the player or a wall. Leave empty for no sound. If it feels redundant on the player, remember the player's own hurt sound (HealthSoundEffect) also plays on a hit.")]
+    [SerializeField] private SoundSO _impactSound;
 
     // Lazily created the first time any Projectile spawns — keeps every projectile organized
     // under one Hierarchy object instead of cluttering the scene root. Static, so it's shared
@@ -86,12 +94,16 @@ public class Projectile : MonoBehaviour
         if (movement != null)
         {
             PlayerHealth.Instance?.TakeDamage(_damage);
+            SFXManager.Instance?.Play(_impactSound);
             Destroy(gameObject);
             return;
         }
 
         // Hitting a wall also ends the projectile. Adjust the tag/layer check to match your setup.
         if (other.gameObject.layer == LayerMask.NameToLayer("Default") && other.GetComponent<PlayerMovement>() == null)
+        {
+            SFXManager.Instance?.Play(_impactSound);
             Destroy(gameObject);
+        }
     }
 }

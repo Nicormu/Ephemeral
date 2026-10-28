@@ -195,6 +195,7 @@ GameObject:
   - component: {fileID: 916417473029488326}
   - component: {fileID: -1033697550846104536}
   - component: {fileID: 2524264629646822365}
+  - component: {fileID: 3602596260665593}
   m_Layer: 9
   m_Name: RangeBat
   m_TagString: Untagged
@@ -411,6 +412,8 @@ MonoBehaviour:
   _moveSpeed: 0.4
   _detectionRange: 13
   _stoppingDistance: 1
+  _avoidsObstacles: 0
+  _waypointReachedDistance: 0.15
 --- !u!114 &851602040308380042
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -447,6 +450,7 @@ MonoBehaviour:
   _lineOfSightBlockingLayers:
     serializedVersion: 2
     m_Bits: 256
+  _fireSound: {fileID: 0}
 --- !u!114 &-1033697550846104536
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -476,3 +480,17 @@ MonoBehaviour:
   _spriteRenderer: {fileID: 5544586414128239488}
   _blinkInterval: 0.05
   _dimAlpha: 0.3
+--- !u!114 &3602596260665593
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7960732215505570430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c97eb3cf1b9c1b07a8db877938db0f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthSoundEffect
+  _hurtSound: {fileID: 0}
+  _deathSound: {fileID: 0}
