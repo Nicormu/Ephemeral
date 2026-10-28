@@ -19,16 +19,16 @@ A 2D roguelite about a dead miner descending into the mine where he died, slowly
 ## Controls
 
 * **WASD** — Move
-* **Left Click** — Attack *(visual feedback is not implemented yet)*
-* **R** — Reset the dungeon
+* **Left Click** — Attack *(no animation yet)*
+* **Hold R** — Reset the dungeon
 
 ## Current state
 
 Ephemeral is currently in an early alpha stage. Core gameplay is under active development, so you may encounter bugs, unfinished features, and balance issues. Feedback is greatly appreciated.
 
-The current build focuses primarily on **procedural mine generation**: randomly generated layouts, room connections with proper doors, floor and wall tiles, environmental decorations, obstacles, and an animated player character.
+The current build covers **procedural mine generation** (random layouts, connected rooms with doors, tiles, decorations, obstacles) and the core gameplay loop: enemies that chase, path around obstacles or shoot from range, a basic attack with knockback, doors that lock until a room is cleared, hazards like fire, destructible obstacles, a minimap, a death screen, and music and SFX with volume settings.
 
-**Still in progress:** boss encounters, and the memory/story system.
+**Still in progress:** boss encounters, attack animation, and the memory/story system.
 
 ## The idea
 
